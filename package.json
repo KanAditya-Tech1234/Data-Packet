@@ -1,0 +1,19 @@
+{
+  "name": "drone-tag-data-packets",
+  "version": "1.0.0",
+  "description": "Drone Tag – Data Packets: drones POST JSON data packets, stored in MongoDB Atlas and shown live on a dashboard",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test",
+    "simulate": "node tools/send-packets.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "mongodb": "^6.12.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

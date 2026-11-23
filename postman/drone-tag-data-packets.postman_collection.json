@@ -1,0 +1,255 @@
+{
+  "info": {
+    "name": "Drone Tag – Data Packets",
+    "description": "Set the environment variable baseUrl (e.g. http://localhost:3000 or your Render URL).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('database connected', () => pm.expect(j.database).to.eql('connected'));",
+              "pm.test('status ok', () => pm.expect(j.status).to.eql('ok'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Send one packet",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('status ok', () => pm.expect(j.status).to.eql('ok'));",
+              "pm.test('has packetId and seq', () => { pm.expect(j.packetId).to.be.a('string'); pm.expect(j.seq).to.be.a('number'); });",
+              "pm.collectionVariables.set('lastSeq', j.seq);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"1005\",\n  \"lat\": 23.078143,\n  \"lon\": 72.531243,\n  \"Alt\": 16.5,\n  \"Alt_R\": \"AGL\",\n  \"d_x\": 0.32,\n  \"d_y\": -0.18,\n  \"d_z\": 0.19\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/packet",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "packet"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Send a batch of 3",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('count is 3', () => pm.expect(j.count).to.eql(3));",
+              "pm.test('3 packet ids', () => pm.expect(j.packetIds).to.have.lengthOf(3));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n  {\n    \"id\": \"1005\",\n    \"lat\": 23.078143,\n    \"lon\": 72.531243,\n    \"Alt\": 16.5,\n    \"Alt_R\": \"AGL\",\n    \"d_x\": 0.32,\n    \"d_y\": -0.18,\n    \"d_z\": 0.19\n  },\n  {\n    \"id\": \"1005\",\n    \"lat\": 23.078201,\n    \"lon\": 72.531302,\n    \"Alt\": 17.1,\n    \"Alt_R\": \"AGL\",\n    \"d_x\": 0.32,\n    \"d_y\": -0.18,\n    \"d_z\": 0.19\n  },\n  {\n    \"id\": \"1005\",\n    \"lat\": 23.078262,\n    \"lon\": 72.531366,\n    \"Alt\": 17.6,\n    \"Alt_R\": \"AGL\",\n    \"d_x\": 0.32,\n    \"d_y\": -0.18,\n    \"d_z\": 0.19\n  }\n]",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/packet",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "packet"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Read one drone (1005)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('packets of drone 1005 only', () => { pm.expect(j.packets.length).to.be.above(0); j.packets.forEach(p => pm.expect(p.trackerId.toLowerCase()).to.eql('1005')); });",
+              "pm.test('oldest first', () => { for (let i = 1; i < j.packets.length; i++) pm.expect(j.packets[i].seq).to.be.above(j.packets[i-1].seq); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/packet/1005?limit=10",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "packet",
+            "1005"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Read all drones",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('has packets, trackers and seq', () => { pm.expect(j.packets).to.be.an('array'); pm.expect(j.trackers).to.include('1005'); pm.expect(j.seq).to.be.a('number'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/packet?limit=200",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "packet"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "200"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Invalid packet (expects 400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 400', () => pm.response.to.have.status(400));",
+              "const j = pm.response.json();",
+              "pm.test('error JSON', () => { pm.expect(j.status).to.eql('error'); pm.expect(j.errors).to.be.an('array').that.is.not.empty; });",
+              "pm.test('lists both problems', () => { pm.expect(j.errors.join(' ')).to.include('lat must be between'); pm.expect(j.errors.join(' ')).to.include('lon is required'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"1005\",\n  \"lat\": 123.4\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/packet",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "packet"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "lastSeq",
+      "value": "0"
+    }
+  ]
+}

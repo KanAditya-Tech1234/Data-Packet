@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data packets · Drone Tag</title>
+<link rel="icon" href="/images/logo.png">
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div id="app-header"></div>
+<main class="page stack">
+  <div class="page-head">
+    <div>
+      <h1>Data packets</h1>
+      <p class="muted">Every packet the drones send, newest at the top. New packets appear by themselves, without refreshing the page.</p>
+    </div>
+    <div class="chips" aria-live="polite">
+      <span class="chip alt" id="live">Connecting…</span>
+      <span class="chip" id="count">–</span>
+    </div>
+  </div>
+
+  <section class="card" aria-label="Controls">
+    <div class="toolbar">
+      <label class="field">Drone
+        <select id="tracker"><option value="">All drones</option></select>
+      </label>
+      <button class="btn btn-outline" type="button" id="pause" aria-pressed="false">Pause</button>
+      <a class="btn btn-accent" id="export" href="/api/export.csv">Export CSV</a>
+      <span class="waiting" id="waiting" aria-live="polite"></span>
+    </div>
+  </section>
+  <div id="status" class="hidden" role="alert"></div>
+
+  <div class="table-box">
+    <table class="data">
+      <thead><tr>
+        <th scope="col">Time (IST)</th><th scope="col">ID</th>
+        <th scope="col" class="num">Latitude</th><th scope="col" class="num">Longitude</th>
+        <th scope="col" class="num">Altitude (m)</th><th scope="col">Altitude ref.</th>
+        <th scope="col" class="num">Δx</th><th scope="col" class="num">Δy</th><th scope="col" class="num">Δz</th>
+      </tr></thead>
+      <tbody id="rows"><tr class="empty"><td colspan="9">Loading data packets…</td></tr></tbody>
+    </table>
+  </div>
+  <p class="muted small" style="margin:0">Up to 500 packets are shown here; use Export CSV for all stored packets.
+    "(received)" means the packet had no usable device time, so the time it reached the server is shown.</p>
+</main>
+<script src="/js/common.js"></script>
+<script src="/js/packets.js"></script>
+</body>
+</html>
