@@ -3,7 +3,7 @@
   'use strict';
   const { esc, fmtIST, fmtInt, api, header, showStatus } = window.DT;
   const $ = id => document.getElementById(id);
-  const MAX_ROWS = 500;
+  const MAX_ROWS = 100;   // the dashboard shows only the newest 100 packets
   const EMPTY = 'No data packets yet. They will appear here as soon as a drone sends one.';
 
   const tbody = $('rows');

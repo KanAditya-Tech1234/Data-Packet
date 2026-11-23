@@ -67,20 +67,21 @@ curl -X POST https://YOUR-SERVICE.onrender.com/api/packet \
 | `MONGODB_DB` | no | `drone_packets` | Database name |
 | `PORT` | no | `3000` | Render sets it |
 | `SESSION_SECRET` | yes in production | random per start | Signs the login cookies. If missing, a random one is used and logins end on restart |
-| `MAX_PACKETS` | no | `100000` | Keep at most this many packets; the oldest are deleted automatically |
+| `MAX_PACKETS` | no | `500` | Keep only the latest this many packets (all drones together); older ones are deleted automatically |
+
+## How much is kept and shown
+
+- **Database:** only the **latest 500 packets** are kept (`MAX_PACKETS`). Each new packet deletes the oldest one
+  beyond 500, so the database never grows past that.
+- **Dashboard:** the table shows only the **latest 100 packets**. New packets appear at the top and the oldest row
+  drops off the bottom. The counter shows how many are stored, e.g. "500 packets (latest 100 shown)".
+- The API (`/api/packet?limit=`) and the CSV export can still return all 500 stored packets.
 
 ## Storage size
 
 Measured with the simulator: a stored packet is about **285 bytes** of BSON. With its three indexes (`_id`,
-`seq`, `trackerIdLower + seq`) it takes roughly **400 bytes**. So:
-
-| `MAX_PACKETS` | Approx. size |
-|---|---|
-| 100,000 (default) | ~40 MB |
-| 500,000 | ~200 MB |
-| 1,000,000 | ~400 MB (too close to the 512 MB M0 limit) |
-
-The default leaves plenty of room in the free 512 MB tier. Accounts take well under 1 KB each.
+`seq`, `trackerIdLower + seq`) it takes roughly **400 bytes**, so 500 packets take only about **200 KB** of the
+free 512 MB tier. Accounts take well under 1 KB each.
 
 ## 1. MongoDB Atlas setup (free)
 

@@ -27,7 +27,7 @@ function loadConfig(env = process.env) {
     port: intEnv(env, 'PORT', 3000, 0, 65535),
     sessionSecret,
     sessionSecretGenerated,
-    maxPackets: intEnv(env, 'MAX_PACKETS', 100000, 1, 10000000),
+    maxPackets: intEnv(env, 'MAX_PACKETS', 500, 1, 10000000),
   };
 }
 
