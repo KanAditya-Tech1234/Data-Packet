@@ -95,7 +95,13 @@ async function createApp({ store, config, log = console }) {
   });
 
   // ---------- static (before the session lookup, so files cost no database call) ----------
-  app.use(express.static(path.join(ROOT, 'public'), { index: false, maxAge: '1h' }));
+  // CSS and JS are re-checked on every load (a cheap 304 when unchanged), so a new deploy shows at once.
+  // Images may be cached for an hour.
+  app.use(express.static(path.join(ROOT, 'public'), {
+    index: false,
+    maxAge: '1h',
+    setHeaders: (res, file) => { if (/\.(css|js)$/.test(file)) res.setHeader('Cache-Control', 'no-cache'); },
+  }));
 
   // ---------- session ----------
   app.use(async (req, res, next) => {

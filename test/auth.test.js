@@ -82,6 +82,13 @@ describe('accounts and sessions', () => {
     assert.equal(mapPage.status, 200);
     assert.match(await mapPage.text(), /id="map"/);
 
+    // CSS and JS are re-checked on every load, so a new deploy is never hidden by a cached old file
+    for (const f of ['/css/app.css?v=3', '/js/map.js?v=3']) {
+      const asset = await fetch(`${srv.base}${f}`);
+      assert.equal(asset.status, 200);
+      assert.equal(asset.headers.get('cache-control'), 'no-cache');
+    }
+
     const dup = await send(srv.base, '/api/auth/register', USER);
     assert.equal(dup.status, 409);
 
