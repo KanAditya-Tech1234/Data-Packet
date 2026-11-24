@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Help · Drone Tag</title>
 <link rel="icon" href="/images/logo.png">
-<link rel="stylesheet" href="/css/app.css?v=3">
+<link rel="stylesheet" href="/css/app.css?v=4">
 </head>
 <body>
 <div id="app-header"></div>
@@ -37,8 +37,8 @@
         <thead><tr><th>Field</th><th>Meaning</th><th>Required</th><th>Rule</th></tr></thead>
         <tbody>
           <tr><td><code>id</code></td><td>Drone / tag ID</td><td>yes</td><td>1-64 letters, digits, <code>.</code> <code>_</code> <code>-</code>; a whole number (1005) is stored as text</td></tr>
-          <tr><td><code>lat</code></td><td>Latitude</td><td>yes</td><td>number −90 … 90</td></tr>
-          <tr><td><code>lon</code></td><td>Longitude</td><td>yes</td><td>number −180 … 180; <code>lat</code> = 0 and <code>lon</code> = 0 together is refused (no GPS fix)</td></tr>
+          <tr><td><code>lat</code></td><td>Latitude</td><td>yes</td><td>number −90 … 90, up to 8 decimals (e.g. <code>23.07814312</code>)</td></tr>
+          <tr><td><code>lon</code></td><td>Longitude</td><td>yes</td><td>number −180 … 180, up to 8 decimals; <code>lat</code> = 0 and <code>lon</code> = 0 together is refused (no GPS fix)</td></tr>
           <tr><td><code>Alt</code></td><td>Altitude, metres</td><td>no</td><td>number −1000 … 100000</td></tr>
           <tr><td><code>Alt_R</code></td><td>Altitude reference</td><td>no</td><td>text up to 40 characters (e.g. <code>MSL</code>, <code>AGL</code>) or a number</td></tr>
           <tr><td><code>d_x</code>, <code>d_y</code>, <code>d_z</code></td><td>Deltas</td><td>no</td><td>numbers −1000000 … 1000000</td></tr>
@@ -87,7 +87,7 @@
     </section>
   </div>
 </main>
-<script src="/js/common.js?v=3"></script>
-<script src="/js/help.js?v=3"></script>
+<script src="/js/common.js?v=4"></script>
+<script src="/js/help.js?v=4"></script>
 </body>
 </html>

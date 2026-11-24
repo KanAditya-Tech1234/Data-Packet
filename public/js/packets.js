@@ -31,6 +31,9 @@
 
   // ---------- rendering ----------
   const dash = '<td class="num none">–</td>';
+  // Latitude / longitude exactly as sent, up to 8 decimals (no padding zeros): 23.07814312, 72.5312
+  const coordText = v => v.toFixed(8).replace(/\.?0+$/, '');
+  const coordCell = v => (typeof v === 'number' && Number.isFinite(v) ? `<td class="num">${esc(coordText(v))}</td>` : dash);
   const numCell = (v, digits) => (typeof v === 'number' && Number.isFinite(v)
     ? `<td class="num">${esc(digits === undefined ? String(v) : v.toFixed(digits))}</td>` : dash);
   const textCell = v => (v === null || v === undefined || v === '' ? '<td class="none">–</td>' : `<td>${esc(v)}</td>`);
@@ -38,7 +41,7 @@
   function rowHtml(p) {
     const src = p.timeSource === 'server' ? '<span class="src">(received)</span>' : '';
     return `<td>${esc(fmtIST(p.recordedAt))}${src}</td>${textCell(p.trackerId)}` +
-      numCell(p.lat, 6) + numCell(p.lon, 6) + numCell(p.alt) + textCell(p.altRef) +
+      coordCell(p.lat) + coordCell(p.lon) + numCell(p.alt) + textCell(p.altRef) +
       numCell(p.dx) + numCell(p.dy) + numCell(p.dz);
   }
 

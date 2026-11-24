@@ -28,11 +28,14 @@
 
   // ---------- map ----------
   const map = L.map('map', { preferCanvas: true }).setView([22.6, 78.9], 5);
+  // OpenStreetMap refuses tiles (403 "Access blocked") without a Referer. The site's own policy sends none
+  // to other sites, so the tiles send just the site's origin (e.g. https://….onrender.com), as OSM asks.
+  const TILE_REFERRER = 'strict-origin-when-cross-origin';
   const street = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19, attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19, attribution: '&copy; OpenStreetMap contributors', referrerPolicy: TILE_REFERRER,
   });
   const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom: 19, attribution: 'Imagery &copy; Esri',
+    maxZoom: 19, attribution: 'Imagery &copy; Esri', referrerPolicy: TILE_REFERRER,
   });
   street.addTo(map);
   L.control.layers({ 'Street map': street, Satellite: satellite }, null, { position: 'topright' }).addTo(map);
@@ -81,13 +84,16 @@
   // ---------- helpers ----------
   const num = (v, digits) => (typeof v === 'number' && Number.isFinite(v) ? (digits === undefined ? String(v) : v.toFixed(digits)) : '–');
   const ll = p => [p.lat, p.lon];
+  // Latitude / longitude exactly as sent, up to 8 decimals (no padding zeros): 23.07814312, 72.5312
+  const coordText = v => v.toFixed(8).replace(/\.?0+$/, '');
+  const coord = v => (typeof v === 'number' && Number.isFinite(v) ? coordText(v) : '–');
   const timeText = p => fmtIST(p.recordedAt) + (p.timeSource === 'server' ? ' (received)' : '');
 
   function popupHtml(p, title) {
     const alt = typeof p.alt === 'number' ? `${num(p.alt)} m${p.altRef ? ' ' + esc(p.altRef) : ''}` : '–';
     return `<div class="map-pop">${title ? `<div class="pop-title">${esc(title)}</div>` : ''}` +
       `<b>Drone:</b> ${esc(p.trackerId)}<br><span class="when"><b>Time:</b> ${esc(timeText(p))}</span><br>` +
-      `<b>Lat, Lon:</b> ${num(p.lat, 6)}, ${num(p.lon, 6)}<br><b>Altitude:</b> ${alt}</div>`;
+      `<b>Lat, Lon:</b> ${coord(p.lat)}, ${coord(p.lon)}<br><b>Altitude:</b> ${alt}</div>`;
   }
 
   // Compass bearing from a to b in degrees (0 = north, clockwise).
@@ -136,8 +142,8 @@
     latestBox.innerHTML =
       `<div><dt>Drone</dt><dd>${esc(p.trackerId)}</dd></div>` +
       `<div><dt>Time (IST)</dt><dd>${esc(timeText(p))}</dd></div>` +
-      `<div><dt>Latitude</dt><dd>${num(p.lat, 6)}</dd></div>` +
-      `<div><dt>Longitude</dt><dd>${num(p.lon, 6)}</dd></div>` +
+      `<div><dt>Latitude</dt><dd>${coord(p.lat)}</dd></div>` +
+      `<div><dt>Longitude</dt><dd>${coord(p.lon)}</dd></div>` +
       `<div><dt>Altitude</dt><dd>${alt}</dd></div>`;
   }
 

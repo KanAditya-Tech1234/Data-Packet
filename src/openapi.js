@@ -130,7 +130,7 @@ function buildOpenApi(serverUrl) {
           type: 'object', required: ['id', 'lat', 'lon'], example: SAMPLE,
           properties: {
             id: { oneOf: [{ type: 'string', pattern: '^[A-Za-z0-9._-]{1,64}$' }, { type: 'integer' }], description: 'Drone / tag ID (alias TrackerId)' },
-            lat: { type: 'number', minimum: -90, maximum: 90, description: 'Latitude (alias Latitude)' },
+            lat: { type: 'number', minimum: -90, maximum: 90, description: 'Latitude, up to 8 decimals (alias Latitude)', example: 23.07814312 },
             lon: { type: 'number', minimum: -180, maximum: 180, description: 'Longitude (aliases long, Longitude). lat=0 and lon=0 together is refused' },
             Alt: { type: 'number', minimum: -1000, maximum: 100000, nullable: true, description: 'Altitude in metres (alias Altitude)' },
             Alt_R: { oneOf: [{ type: 'string', maxLength: 40 }, { type: 'number' }], nullable: true, description: 'Altitude reference, e.g. MSL or AGL (alias "Altitude Reference")' },

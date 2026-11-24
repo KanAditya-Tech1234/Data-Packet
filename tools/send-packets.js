@@ -45,7 +45,7 @@ function nextPacket() {
   if (!prev) prev = { x, y, z };
   const p = {
     id: opt.id,
-    lat: Number(lat.toFixed(6)), lon: Number(lon.toFixed(6)),
+    lat: Number(lat.toFixed(8)), lon: Number(lon.toFixed(8)),
     Alt: Number(alt.toFixed(2)), Alt_R: 'AGL',
     d_x: Number((x - prev.x).toFixed(2)), d_y: Number((y - prev.y).toFixed(2)), d_z: Number((z - prev.z).toFixed(2)),
     Timestamp: istNow(),
