@@ -68,8 +68,9 @@
     <p>On the <a href="/config">Configuration</a> page you upload the drones' configuration file with a version number
       (numbers separated by dots, e.g. <code>1.2</code>; each new version must be newer than the current one). The drones use two APIs, no login needed:</p>
     <ul class="small">
-      <li><code>GET /api/config/version?current=1.1</code>: the latest version, file name, size and SHA-256, plus
-        <code>"updateAvailable": true/false</code> compared with the drone's own version.</li>
+      <li><code>GET /api/config/version?current=1.1</code>: answers only <code>status</code>, <code>updateAvailable</code>,
+        <code>version</code>, <code>fileName</code> and <code>contentType</code>. <code>updateAvailable</code> is true when the
+        uploaded version is newer than the drone's own version.</li>
       <li><code>GET /api/config/download</code>: the latest file (exact bytes). <code>?version=1.1</code> gets an older one.
         Headers <code>X-Config-Version</code> and <code>X-Config-SHA256</code> let the drone check the download.</li>
     </ul>

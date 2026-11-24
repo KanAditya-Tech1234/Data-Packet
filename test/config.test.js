@@ -77,15 +77,17 @@ describe('configuration file APIs', () => {
 
     let v = await getJson(srv.base, '/api/config/version');
     assert.equal(v.status, 200);
-    assert.equal(v.body.version, '1.0');
-    assert.equal(v.body.notes, 'first config');
-    assert.equal(v.body.downloadUrl, '/api/config/download?version=1.0');
-    assert.equal(v.body.updateAvailable, undefined);
+    // exactly these five fields, in this order, nothing else
+    assert.deepEqual(Object.keys(v.body), ['status', 'updateAvailable', 'version', 'fileName', 'contentType']);
+    assert.deepEqual(v.body, { status: 'ok', updateAvailable: true, version: '1.0', fileName: 'drone.json', contentType: 'application/json' });
 
     v = await getJson(srv.base, '/api/config/version?current=0.9');
     assert.equal(v.body.updateAvailable, true);
     v = await getJson(srv.base, '/api/config/version?current=1.0.0');
     assert.equal(v.body.updateAvailable, false);
+    assert.deepEqual(Object.keys(v.body), ['status', 'updateAvailable', 'version', 'fileName', 'contentType']);
+    v = await getJson(srv.base, '/api/config/version?current=2');
+    assert.equal(v.body.updateAvailable, false, 'a drone that is ahead does not download');
     assert.equal((await getJson(srv.base, '/api/config/version?current=x')).status, 400);
 
     const d = await fetch(`${srv.base}/api/config/download`);

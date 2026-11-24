@@ -257,12 +257,15 @@ async function createApp({ store, config, log = console }) {
       const doc = await store.findConfig();
       res.set('Cache-Control', 'no-store');
       if (!doc) return noConfig(res);
-      const out = { status: 'ok', ...cfg.toMeta(doc) };
-      if (current) {
-        out.current = current.version;
-        out.updateAvailable = doc.versionKey > current.key;
-      }
-      res.json(out);
+      // Exactly these five fields, nothing else (agreed with the drone team).
+      // Without ?current= the drone has no known version, so it should download: updateAvailable is true.
+      res.json({
+        status: 'ok',
+        updateAvailable: current ? doc.versionKey > current.key : true,
+        version: doc.version,
+        fileName: doc.fileName,
+        contentType: doc.contentType,
+      });
     } catch (err) { next(err); }
   });
 

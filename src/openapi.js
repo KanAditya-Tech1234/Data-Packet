@@ -101,11 +101,12 @@ function buildOpenApi(serverUrl) {
       '/api/config/version': {
         get: {
           tags: ['Configuration'], summary: 'Latest configuration version (for the drones; no login)',
-          description: 'Returns the newest uploaded version and its file details. Send the drone version as `current` to get `updateAvailable`. ' +
+          description: 'Returns exactly five fields: status, updateAvailable, version, fileName, contentType. Send the drone version as `current`: ' +
+            '`updateAvailable` is true when the uploaded version is newer (and always true when `current` is not sent). ' +
             'Versions are 1-4 numbers separated by dots and compared number by number (1.10 is newer than 1.9; 1.2 equals 1.2.0).',
           parameters: [{ name: 'current', in: 'query', description: 'The version the drone has now', schema: { type: 'string', example: '1.1' } }],
           responses: {
-            200: { description: 'Latest version', content: { 'application/json': { example: { status: 'ok', ...CFG_META, current: '1.1', updateAvailable: true } } } },
+            200: { description: 'Latest version', content: { 'application/json': { example: { status: 'ok', updateAvailable: true, version: '1.2', fileName: 'drone.json', contentType: 'application/json' } } } },
             400: err('Bad current version', { status: 'error', message: 'current: version must be numbers separated by dots, e.g. 1, 1.2 or 1.2.10 (at most 4 parts)', errors: ['current: version must be numbers separated by dots, e.g. 1, 1.2 or 1.2.10 (at most 4 parts)'] }),
             404: err('Nothing uploaded yet', { status: 'error', message: 'no configuration file has been uploaded yet', errors: ['no configuration file has been uploaded yet'] }),
           },

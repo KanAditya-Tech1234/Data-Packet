@@ -46,7 +46,7 @@ Configuration file (see the section below):
 
 | Method | Path | |
 |---|---|---|
-| GET | `/api/config/version?current=` | Latest version + file details; `updateAvailable` when `current` is given |
+| GET | `/api/config/version?current=` | `status`, `updateAvailable`, `version`, `fileName`, `contentType` (nothing else) |
 | GET | `/api/config/download?version=` | The file itself (latest, or a given version) |
 | POST | `/api/config?version=&fileName=&notes=` | Upload a new version; the body is the file (login required) |
 | GET | `/api/config/versions` | All kept versions (login required) |
@@ -100,8 +100,10 @@ up to **1 MB**, and are stored in MongoDB together with their SHA-256 and MD5.
   number, so `1.10` is newer than `1.9`, and `1.2` is the same as `1.2.0`. A new upload must be newer than the
   current version (409 otherwise).
 - **Drone flow** (no login or key):
-  1. `GET /api/config/version?current=<the drone's version>` returns `{"status":"ok","version":"1.2","fileName":"drone.json",
-     "size":214,"sha256":"…","updateAvailable":true,…}` (404 until the first file is uploaded).
+  1. `GET /api/config/version?current=<the drone's version>` returns exactly
+     `{"status":"ok","updateAvailable":true,"version":"1.2","fileName":"drone.json","contentType":"application/json"}`.
+     `updateAvailable` is true when the uploaded version is newer than `current` (always true without `current`).
+     404 until the first file is uploaded.
   2. If `updateAvailable` is true: `GET /api/config/download` returns the exact bytes, with `Content-Length`,
      `X-Config-Version`, `X-Config-SHA256` and `X-Config-MD5` headers to check the download.
 

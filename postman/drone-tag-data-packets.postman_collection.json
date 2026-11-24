@@ -254,7 +254,7 @@
             "type": "text/javascript",
             "exec": [
               "pm.test('200, or 404 before the first upload', () => pm.expect(pm.response.code).to.be.oneOf([200, 404]));",
-              "if (pm.response.code === 200) { const j = pm.response.json(); pm.test('has version, sha256 and updateAvailable', () => { pm.expect(j.version).to.be.a('string'); pm.expect(j.sha256).to.have.lengthOf(64); pm.expect(j.updateAvailable).to.be.a('boolean'); }); }"
+              "if (pm.response.code === 200) { const j = pm.response.json(); pm.test('exactly status, updateAvailable, version, fileName, contentType', () => pm.expect(Object.keys(j)).to.eql(['status', 'updateAvailable', 'version', 'fileName', 'contentType'])); pm.test('updateAvailable is true/false', () => pm.expect(j.updateAvailable).to.be.a('boolean')); }"
             ]
           }
         }

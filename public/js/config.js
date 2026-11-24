@@ -20,7 +20,7 @@
     $('url-version').textContent = `GET ${origin}/api/config/version?current=${cur}`;
     $('url-download').textContent = `GET ${origin}/api/config/download`;
     const sample = latest
-      ? { status: 'ok', version: latest.version, fileName: latest.fileName, size: latest.size, sha256: latest.sha256, updateAvailable: false }
+      ? { status: 'ok', updateAvailable: false, version: latest.version, fileName: latest.fileName, contentType: latest.contentType }
       : { status: 'error', message: 'no configuration file has been uploaded yet' };
     $('example').textContent =
       `# 1. Check: is there a newer configuration than the one on the drone (${cur})?\n` +

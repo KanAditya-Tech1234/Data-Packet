@@ -53,8 +53,8 @@
         <thead><tr><th>API</th><th>What it does</th></tr></thead>
         <tbody>
           <tr><td><code id="url-version">GET /api/config/version?current=1.0</code></td>
-            <td>The latest version, its file name, size and SHA-256. With <code>current=</code> (the drone's version) it also answers
-              <code>"updateAvailable": true</code> or <code>false</code>.</td></tr>
+            <td>Answers <code>status</code>, <code>updateAvailable</code>, <code>version</code>, <code>fileName</code> and <code>contentType</code>.
+              <code>updateAvailable</code> is <code>true</code> when the uploaded version is newer than <code>current=</code> (the drone's version).</td></tr>
           <tr><td><code id="url-download">GET /api/config/download</code></td>
             <td>The latest file itself (the exact bytes uploaded). <code>?version=1.0</code> downloads an older version.
               Headers: <code>X-Config-Version</code>, <code>X-Config-SHA256</code>, <code>X-Config-MD5</code>, <code>Content-Length</code>.</td></tr>
