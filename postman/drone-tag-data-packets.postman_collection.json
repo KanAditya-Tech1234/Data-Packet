@@ -244,6 +244,73 @@
           ]
         }
       }
+    },
+    {
+      "name": "Config: check version",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200, or 404 before the first upload', () => pm.expect(pm.response.code).to.be.oneOf([200, 404]));",
+              "if (pm.response.code === 200) { const j = pm.response.json(); pm.test('has version, sha256 and updateAvailable', () => { pm.expect(j.version).to.be.a('string'); pm.expect(j.sha256).to.have.lengthOf(64); pm.expect(j.updateAvailable).to.be.a('boolean'); }); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/config/version?current=1.0",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "config",
+            "version"
+          ],
+          "query": [
+            {
+              "key": "current",
+              "value": "1.0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Config: download latest",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200, or 404 before the first upload', () => pm.expect(pm.response.code).to.be.oneOf([200, 404]));",
+              "if (pm.response.code === 200) pm.test('has the version header', () => pm.expect(pm.response.headers.get('X-Config-Version')).to.be.a('string'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/config/download",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "config",
+            "download"
+          ],
+          "query": []
+        }
+      }
     }
   ],
   "variable": [

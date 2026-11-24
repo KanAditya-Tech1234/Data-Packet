@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Help · Drone Tag</title>
 <link rel="icon" href="/images/logo.png">
-<link rel="stylesheet" href="/css/app.css?v=4">
+<link rel="stylesheet" href="/css/app.css?v=5">
 </head>
 <body>
 <div id="app-header"></div>
@@ -63,6 +63,18 @@
       Switch between street map and satellite with the button in the top-right corner of the map.</p>
   </section>
 
+  <section class="card">
+    <h2 class="section-title">Configuration file</h2>
+    <p>On the <a href="/config">Configuration</a> page you upload the drones' configuration file with a version number
+      (numbers separated by dots, e.g. <code>1.2</code>; each new version must be newer than the current one). The drones use two APIs, no login needed:</p>
+    <ul class="small">
+      <li><code>GET /api/config/version?current=1.1</code>: the latest version, file name, size and SHA-256, plus
+        <code>"updateAvailable": true/false</code> compared with the drone's own version.</li>
+      <li><code>GET /api/config/download</code>: the latest file (exact bytes). <code>?version=1.1</code> gets an older one.
+        Headers <code>X-Config-Version</code> and <code>X-Config-SHA256</code> let the drone check the download.</li>
+    </ul>
+  </section>
+
   <div class="grid-2">
     <section class="card">
       <h2 class="section-title">Read packets</h2>
@@ -87,7 +99,7 @@
     </section>
   </div>
 </main>
-<script src="/js/common.js?v=4"></script>
-<script src="/js/help.js?v=4"></script>
+<script src="/js/common.js?v=5"></script>
+<script src="/js/help.js?v=5"></script>
 </body>
 </html>

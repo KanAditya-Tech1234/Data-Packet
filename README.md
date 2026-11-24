@@ -42,6 +42,15 @@ No login or key is needed to send or read packets. Full reference: `/docs` (Swag
 | GET | `/api/packet-stream?trackerId=&since=` | Live feed (Server-Sent Events) |
 | GET | `/api/export.csv?id=` | CSV export (login required) |
 
+Configuration file (see the section below):
+
+| Method | Path | |
+|---|---|---|
+| GET | `/api/config/version?current=` | Latest version + file details; `updateAvailable` when `current` is given |
+| GET | `/api/config/download?version=` | The file itself (latest, or a given version) |
+| POST | `/api/config?version=&fileName=&notes=` | Upload a new version; the body is the file (login required) |
+| GET | `/api/config/versions` | All kept versions (login required) |
+
 Sample packet:
 
 ```json
@@ -80,6 +89,26 @@ curl -X POST https://YOUR-SERVICE.onrender.com/api/packet \
   an arrow at the current position pointing where it is heading). It moves by itself as new packets arrive.
   Street map or satellite; click a point for its time, position and altitude. Map tiles come from OpenStreetMap
   and Esri (no key needed).
+
+## Configuration file
+
+The dashboard's **Configuration** page uploads the drones' configuration file with a version number, shows the
+current version and keeps the **newest 20 versions** (older ones are deleted automatically). Files can be any type,
+up to **1 MB**, and are stored in MongoDB together with their SHA-256 and MD5.
+
+- **Version numbers** are 1–4 whole numbers separated by dots (`3`, `1.2`, `1.2.10`). They are compared number by
+  number, so `1.10` is newer than `1.9`, and `1.2` is the same as `1.2.0`. A new upload must be newer than the
+  current version (409 otherwise).
+- **Drone flow** (no login or key):
+  1. `GET /api/config/version?current=<the drone's version>` returns `{"status":"ok","version":"1.2","fileName":"drone.json",
+     "size":214,"sha256":"…","updateAvailable":true,…}` (404 until the first file is uploaded).
+  2. If `updateAvailable` is true: `GET /api/config/download` returns the exact bytes, with `Content-Length`,
+     `X-Config-Version`, `X-Config-SHA256` and `X-Config-MD5` headers to check the download.
+
+```bash
+curl "https://YOUR-SERVICE.onrender.com/api/config/version?current=1.1"
+curl -o drone.json "https://YOUR-SERVICE.onrender.com/api/config/download"
+```
 
 ## Storage size
 

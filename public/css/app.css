@@ -161,6 +161,16 @@ table.data tr.flash td { animation: flash 2.4s ease-out; }
 .facts dt { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); }
 .facts dd { margin: 2px 0 0; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 
+/* ---------- configuration file ---------- */
+.form-stack { display: grid; gap: 14px; }
+input[type="file"] { padding: 7px 10px; cursor: pointer; }
+.facts-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.facts .wide { grid-column: 1 / -1; }
+.facts dd.big { font-size: 22px; color: var(--forest); }
+.facts dd.hash { font-family: Consolas, "Cascadia Mono", Menlo, monospace; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.chip.tiny { font-size: 11px; padding: 2px 8px; margin-left: 6px; vertical-align: 1px; }
+table.data td.notes { white-space: normal; min-width: 180px; max-width: 360px; font-weight: 500; }
+
 /* ---------- help ---------- */
 table.fields { width: 100%; border-collapse: collapse; font-size: 14px; }
 table.fields th { text-align: left; background: var(--saffron-soft); color: var(--saffron-dark); font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; padding: 8px 10px; }
@@ -197,6 +207,7 @@ table.fields td { padding: 8px 10px; border-bottom: 1px solid var(--border); ver
   .page-head { align-items: flex-start; }
   h1 { font-size: 21px; }
   .map { height: 58vh; min-height: 340px; }
+  .facts-2 { grid-template-columns: minmax(0, 1fr); }
   .map-legend { font-size: 11.5px; padding: 6px 8px; }
 }
 @media (prefers-reduced-motion: reduce) {

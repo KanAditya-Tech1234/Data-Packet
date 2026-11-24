@@ -46,7 +46,9 @@ class MongoStore {
     this.counters = db.collection('counters');
     this.trackers = db.collection('trackers');
     this.users = db.collection('users');
+    this.configs = db.collection('configs');
     await Promise.all([
+      this.configs.createIndex({ versionKey: 1 }, { unique: true }),
       this.packets.createIndex({ seq: 1 }, { unique: true }),
       this.packets.createIndex({ trackerIdLower: 1, seq: 1 }),
       this.users.createIndex({ phone: 1 }, { unique: true }),
@@ -116,6 +118,42 @@ class MongoStore {
 
   async findUserByPhone(phone) {
     return this.users.findOne({ phone });
+  }
+
+  // ---------- configuration files ----------
+  static fromConfigDoc(doc) {
+    if (!doc) return null;
+    if (doc.data && !Buffer.isBuffer(doc.data)) doc.data = Buffer.from(doc.data.buffer ?? doc.data);
+    return doc;
+  }
+
+  async insertConfig(doc) {
+    try {
+      await this.configs.insertOne(doc);
+    } catch (err) {
+      if (err && err.code === 11000) throw new DuplicateError('version already exists');
+      throw err;
+    }
+  }
+
+  /** Newest version (highest versionKey), or the given one. withData adds the file bytes. */
+  async findConfig({ versionKey = null, withData = false } = {}) {
+    const projection = withData ? {} : { data: 0 };
+    const q = versionKey ? { versionKey } : {};
+    const [doc] = await this.configs.find(q, { projection }).sort({ versionKey: -1 }).limit(1).toArray();
+    return MongoStore.fromConfigDoc(doc || null);
+  }
+
+  async listConfigs(limit = 50) {
+    return this.configs.find({}, { projection: { data: 0 } }).sort({ versionKey: -1 }).limit(limit).toArray();
+  }
+
+  /** Keep the newest `keep` versions, delete the rest. */
+  async pruneConfigs(keep) {
+    const [cut] = await this.configs.find({}, { projection: { versionKey: 1 } }).sort({ versionKey: -1 }).skip(keep).limit(1).toArray();
+    if (!cut) return 0;
+    const r = await this.configs.deleteMany({ versionKey: { $lte: cut.versionKey } });
+    return r.deletedCount;
   }
 
   async dropDatabase() {

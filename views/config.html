@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Configuration · Drone Tag</title>
+<link rel="icon" href="/images/logo.png">
+<link rel="stylesheet" href="/css/app.css?v=5">
+</head>
+<body>
+<div id="app-header"></div>
+<main class="page stack">
+  <div class="page-head">
+    <div>
+      <h1>Configuration file</h1>
+      <p class="muted">Upload the drones' configuration file with a version number. The drones check the version and download
+        the file when a newer one is available.</p>
+    </div>
+    <div class="chips" aria-live="polite"><span class="chip" id="current-chip">–</span></div>
+  </div>
+
+  <div class="grid-2">
+    <section class="card" aria-label="Current version">
+      <h2 class="section-title">Current version</h2>
+      <div id="current"><p class="muted">Loading…</p></div>
+    </section>
+
+    <section class="card" aria-label="Upload a new version">
+      <h2 class="section-title">Upload a new version</h2>
+      <form id="upload-form" class="form-stack" novalidate>
+        <label class="field">Configuration file
+          <input type="file" id="cfg-file" required>
+          <span class="hint">Any file type (.json, .txt, .ini, .bin …), up to 1 MB.</span>
+        </label>
+        <label class="field">Version number
+          <input id="cfg-version" placeholder="e.g. 1.0" maxlength="30" autocomplete="off" inputmode="decimal" required>
+          <span class="hint" id="version-hint">Numbers separated by dots, e.g. 1, 1.2 or 1.2.10. It must be newer than the current version.</span>
+        </label>
+        <label class="field">Notes (optional)
+          <input id="cfg-notes" maxlength="300" placeholder="What changed in this version" autocomplete="off">
+        </label>
+        <div id="upload-status" class="hidden" role="alert"></div>
+        <div class="actions"><button class="btn btn-primary" type="submit" id="upload-btn">Upload</button></div>
+      </form>
+    </section>
+  </div>
+
+  <section class="card" aria-label="APIs for the drone team">
+    <h2 class="section-title">APIs for the drone team</h2>
+    <p class="muted">No login or key is needed. The drone first checks the version and downloads the file only when it is newer.</p>
+    <div class="scroll-x">
+      <table class="fields">
+        <thead><tr><th>API</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code id="url-version">GET /api/config/version?current=1.0</code></td>
+            <td>The latest version, its file name, size and SHA-256. With <code>current=</code> (the drone's version) it also answers
+              <code>"updateAvailable": true</code> or <code>false</code>.</td></tr>
+          <tr><td><code id="url-download">GET /api/config/download</code></td>
+            <td>The latest file itself (the exact bytes uploaded). <code>?version=1.0</code> downloads an older version.
+              Headers: <code>X-Config-Version</code>, <code>X-Config-SHA256</code>, <code>X-Config-MD5</code>, <code>Content-Length</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <pre><code id="example">Loading…</code></pre>
+    <p class="muted small" style="margin:0">Both answer 404 until the first file is uploaded. Full details: <a href="/docs">API docs</a>.</p>
+  </section>
+
+  <section aria-label="All versions" class="stack">
+    <h2 class="section-title" style="margin:0">All versions</h2>
+    <div class="table-box">
+      <table class="data">
+        <thead><tr>
+          <th scope="col">Version</th><th scope="col">File</th><th scope="col" class="num">Size</th>
+          <th scope="col">Uploaded (IST)</th><th scope="col">By</th><th scope="col">Notes</th><th scope="col">File</th>
+        </tr></thead>
+        <tbody id="versions"><tr class="empty"><td colspan="7">Loading…</td></tr></tbody>
+      </table>
+    </div>
+    <p class="muted small" style="margin:0">The newest 20 versions are kept; older ones are deleted automatically.</p>
+  </section>
+</main>
+<script src="/js/common.js?v=5"></script>
+<script src="/js/config.js?v=5"></script>
+</body>
+</html>

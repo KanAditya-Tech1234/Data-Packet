@@ -9,6 +9,7 @@ const { SseHub } = require('./sse');
 const auth = require('./auth');
 const csv = require('./csv');
 const { buildOpenApi } = require('./openapi');
+const cfg = require('./config-files');
 
 const ROOT = path.join(__dirname, '..');
 const VIEWS = path.join(ROOT, 'views');
@@ -22,6 +23,10 @@ const ENDPOINTS = [
   'GET /api/packet/:id',
   'GET /api/packet-stream',
   'GET /api/export.csv?id=<id>  (login required)',
+  'GET /api/config/version?current=<version>',
+  'GET /api/config/download?version=<version>',
+  'POST /api/config?version=<version>&fileName=<name>  (login required)',
+  'GET /api/config/versions  (login required)',
   'POST /api/auth/register',
   'POST /api/auth/login',
   'POST /api/auth/logout',
@@ -235,6 +240,90 @@ async function createApp({ store, config, log = console }) {
     }
   });
 
+  // ---------- configuration files ----------
+  // Drones (no login): GET /api/config/version and GET /api/config/download.
+  // Dashboard (login): POST /api/config uploads a new version, GET /api/config/versions lists them.
+  const versionParam = (value, name) => {
+    if (value === undefined || value === '') return null;
+    const v = typeof value === 'string' ? cfg.parseVersion(value) : null;
+    if (!v) throw new HttpError(400, `${name}: ${cfg.VERSION_HELP}`);
+    return v;
+  };
+  const noConfig = res => sendError(res, 404, 'no configuration file has been uploaded yet');
+
+  app.get('/api/config/version', async (req, res, next) => {
+    try {
+      const current = versionParam(req.query.current, 'current');
+      const doc = await store.findConfig();
+      res.set('Cache-Control', 'no-store');
+      if (!doc) return noConfig(res);
+      const out = { status: 'ok', ...cfg.toMeta(doc) };
+      if (current) {
+        out.current = current.version;
+        out.updateAvailable = doc.versionKey > current.key;
+      }
+      res.json(out);
+    } catch (err) { next(err); }
+  });
+
+  app.get('/api/config/download', async (req, res, next) => {
+    try {
+      const wanted = versionParam(req.query.version, 'version');
+      const doc = await store.findConfig({ versionKey: wanted ? wanted.key : null, withData: true });
+      res.set('Cache-Control', 'no-store');
+      if (!doc) {
+        if (!wanted) return noConfig(res);
+        return sendError(res, 404, `configuration version ${wanted.version} not found`);
+      }
+      res.set({
+        'Content-Type': doc.contentType,
+        'Content-Length': String(doc.data.length),
+        'Content-Disposition': `attachment; filename="${doc.fileName}"`,
+        'X-Config-Version': doc.version,
+        'X-Config-SHA256': doc.sha256,
+        'X-Config-MD5': doc.md5,
+      });
+      res.end(doc.data);
+    } catch (err) { next(err); }
+  });
+
+  app.get('/api/config/versions', requireApi, async (req, res, next) => {
+    try {
+      const docs = await store.listConfigs(cfg.KEEP_VERSIONS);
+      res.set('Cache-Control', 'no-store').json({ status: 'ok', keep: cfg.KEEP_VERSIONS, versions: docs.map(cfg.toMeta) });
+    } catch (err) { next(err); }
+  });
+
+  const fileBody = express.raw({ type: () => true, limit: cfg.MAX_CONFIG_BYTES });
+  app.post('/api/config', requireApi, fileBody, async (req, res, next) => {
+    try {
+      const errors = [];
+      const v = cfg.parseVersion(typeof req.query.version === 'string' ? req.query.version : '');
+      if (!v) errors.push(cfg.VERSION_HELP);
+      const data = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+      if (!data.length) errors.push('the file is empty: choose a configuration file');
+      const notes = typeof req.query.notes === 'string' ? req.query.notes.trim() : '';
+      if (notes.length > 300) errors.push('notes must be at most 300 characters');
+      if (errors.length) return sendError(res, 400, errors[0], errors);
+
+      const latest = await store.findConfig();
+      if (latest && v.key <= latest.versionKey) {
+        return sendError(res, 409, `version ${v.version} is not newer than the current version ${latest.version}`,
+          undefined, { currentVersion: latest.version });
+      }
+      const doc = cfg.makeConfigDoc({
+        version: v.version, fileName: req.query.fileName, notes, data, uploadedBy: req.user.name,
+      });
+      try { await store.insertConfig(doc); } catch (err) {
+        if (err.code === 'DUPLICATE') return sendError(res, 409, `version ${v.version} already exists`);
+        throw err;
+      }
+      try { await store.pruneConfigs(cfg.KEEP_VERSIONS); } catch { /* retried on the next upload */ }
+      log.log(`Configuration ${doc.version} uploaded by ${req.user.name} (${doc.fileName}, ${doc.size} bytes)`);
+      res.status(201).json({ status: 'ok', ...cfg.toMeta(doc) });
+    } catch (err) { next(err); }
+  });
+
   // ---------- accounts ----------
   const jsonBody = express.json({ limit: '10kb', type: () => true });
   const setSession = (req, res, user) =>
@@ -308,6 +397,7 @@ async function createApp({ store, config, log = console }) {
   });
   app.get('/', requirePage, page('packets'));
   app.get('/map', requirePage, page('map'));
+  app.get('/config', requirePage, page('config'));
   app.get('/help', requirePage, page('help'));
 
   app.use((req, res) => {

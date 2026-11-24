@@ -8,6 +8,8 @@ const STORED = {
   recordedAt: '2026-11-23T09:30:12.345Z', timeSource: 'server',
 };
 
+const CFG_META = { version: '1.2', fileName: 'drone.json', contentType: 'application/json', size: 214, sha256: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08', md5: '098f6bcd4621d373cade4e832627b4f6', notes: 'Higher upload rate', uploadedBy: 'Asha Patel', uploadedAt: '2026-11-24T10:30:00.000Z', downloadUrl: '/api/config/download?version=1.2' };
+
 const errorRef = { $ref: '#/components/schemas/Error' };
 const err = (description, example) => ({ description, content: { 'application/json': { schema: errorRef, example } } });
 
@@ -22,7 +24,7 @@ function buildOpenApi(serverUrl) {
         '(`Alt_R` = `alt_r` = `AltR`). Numbers may be sent as text. The `Content-Type` header is not required.',
     },
     servers: [{ url: serverUrl }],
-    tags: [{ name: 'Packets' }, { name: 'Live' }, { name: 'Service' }, { name: 'Dashboard' }],
+    tags: [{ name: 'Packets' }, { name: 'Live' }, { name: 'Configuration', description: 'Configuration file for the drones' }, { name: 'Service' }, { name: 'Dashboard' }],
     paths: {
       '/health': {
         get: {
@@ -94,6 +96,56 @@ function buildOpenApi(serverUrl) {
             { name: 'Last-Event-ID', in: 'header', description: 'Set by the browser on reconnect; wins over `since`', schema: { type: 'string' } },
           ],
           responses: { 200: { description: 'Event stream', content: { 'text/event-stream': { schema: { type: 'string' }, example: `retry: 3000\n\nid: 42\nevent: packet\ndata: ${JSON.stringify(STORED)}\n\n` } } } },
+        },
+      },
+      '/api/config/version': {
+        get: {
+          tags: ['Configuration'], summary: 'Latest configuration version (for the drones; no login)',
+          description: 'Returns the newest uploaded version and its file details. Send the drone version as `current` to get `updateAvailable`. ' +
+            'Versions are 1-4 numbers separated by dots and compared number by number (1.10 is newer than 1.9; 1.2 equals 1.2.0).',
+          parameters: [{ name: 'current', in: 'query', description: 'The version the drone has now', schema: { type: 'string', example: '1.1' } }],
+          responses: {
+            200: { description: 'Latest version', content: { 'application/json': { example: { status: 'ok', ...CFG_META, current: '1.1', updateAvailable: true } } } },
+            400: err('Bad current version', { status: 'error', message: 'current: version must be numbers separated by dots, e.g. 1, 1.2 or 1.2.10 (at most 4 parts)', errors: ['current: version must be numbers separated by dots, e.g. 1, 1.2 or 1.2.10 (at most 4 parts)'] }),
+            404: err('Nothing uploaded yet', { status: 'error', message: 'no configuration file has been uploaded yet', errors: ['no configuration file has been uploaded yet'] }),
+          },
+        },
+      },
+      '/api/config/download': {
+        get: {
+          tags: ['Configuration'], summary: 'Download the configuration file (for the drones; no login)',
+          description: 'The exact bytes that were uploaded. Without `version` the newest file. Response headers: `Content-Length`, ' +
+            '`X-Config-Version`, `X-Config-SHA256`, `X-Config-MD5` (to check the download), `Content-Disposition` (file name).',
+          parameters: [{ name: 'version', in: 'query', description: 'A specific (older) version', schema: { type: 'string', example: '1.2' } }],
+          responses: {
+            200: { description: 'The file', content: { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } } },
+            404: err('Not found', { status: 'error', message: 'configuration version 7.7 not found', errors: ['configuration version 7.7 not found'] }),
+          },
+        },
+      },
+      '/api/config': {
+        post: {
+          tags: ['Configuration'], summary: 'Upload a new configuration version (login required)',
+          description: 'The body is the file itself (any type, up to 1 MB). The version must be newer than the current one. The newest 20 versions are kept.',
+          parameters: [
+            { name: 'version', in: 'query', required: true, schema: { type: 'string', example: '1.2' } },
+            { name: 'fileName', in: 'query', schema: { type: 'string', example: 'drone.json' } },
+            { name: 'notes', in: 'query', schema: { type: 'string', maxLength: 300 } },
+          ],
+          requestBody: { required: true, content: { 'application/octet-stream': { schema: { type: 'string', format: 'binary' } } } },
+          responses: {
+            201: { description: 'Uploaded', content: { 'application/json': { example: { status: 'ok', ...CFG_META } } } },
+            400: err('Bad version or empty file', { status: 'error', message: 'the file is empty: choose a configuration file', errors: ['the file is empty: choose a configuration file'] }),
+            401: err('Not logged in', { status: 'error', message: 'log in to use this endpoint', errors: ['log in to use this endpoint'] }),
+            409: err('Not newer', { status: 'error', message: 'version 1.1 is not newer than the current version 1.2', errors: ['version 1.1 is not newer than the current version 1.2'], currentVersion: '1.2' }),
+            413: err('Larger than 1 MB', { status: 'error', message: 'the body is too large (limit 1 MB)', errors: ['the body is too large (limit 1 MB)'] }),
+          },
+        },
+      },
+      '/api/config/versions': {
+        get: {
+          tags: ['Configuration'], summary: 'All kept versions, newest first (login required)',
+          responses: { 200: { description: 'Versions', content: { 'application/json': { example: { status: 'ok', keep: 20, versions: [CFG_META] } } } } },
         },
       },
       '/api/export.csv': {

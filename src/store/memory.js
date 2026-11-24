@@ -12,6 +12,7 @@ class MemoryStore {
     this.counter = 0;
     this.trackers = new Map();
     this.users = new Map();
+    this.configs = [];
     this.up = true;
   }
   async init() {}
@@ -44,7 +45,24 @@ class MemoryStore {
     this.users.set(user.phone, clone(user));
   }
   async findUserByPhone(phone) { const u = this.users.get(phone); return u ? clone(u) : null; }
-  async dropDatabase() { this.packets = []; this.users.clear(); this.trackers.clear(); this.counter = 0; }
+  async insertConfig(doc) {
+    if (this.configs.some(c => c.versionKey === doc.versionKey)) throw new DuplicateError('version already exists');
+    this.configs.push({ ...doc, data: Buffer.from(doc.data) });
+    this.configs.sort((a, b) => (a.versionKey < b.versionKey ? 1 : -1));   // newest first
+  }
+  async findConfig({ versionKey = null, withData = false } = {}) {
+    const doc = versionKey ? this.configs.find(c => c.versionKey === versionKey) : this.configs[0];
+    if (!doc) return null;
+    const { data, ...meta } = doc;
+    return withData ? { ...meta, data: Buffer.from(data) } : { ...meta };
+  }
+  async listConfigs(limit = 50) { return this.configs.slice(0, limit).map(({ data, ...meta }) => ({ ...meta })); }
+  async pruneConfigs(keep) {
+    const before = this.configs.length;
+    this.configs = this.configs.slice(0, keep);
+    return before - this.configs.length;
+  }
+  async dropDatabase() { this.packets = []; this.users.clear(); this.trackers.clear(); this.configs = []; this.counter = 0; }
   async close() {}
 }
 
