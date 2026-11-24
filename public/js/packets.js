@@ -14,6 +14,7 @@
   const waiting = $('waiting');
   const statusBox = $('status');
   const exportLink = $('export');
+  const mapLink = $('map-link');
 
   let trackerId = new URLSearchParams(location.search).get('id') || '';
   let shown = new Set();   // seq numbers in the table
@@ -158,6 +159,7 @@
     countChip.textContent = '–';
     showStatus(statusBox, null);
     exportLink.href = trackerId ? `/api/export.csv?id=${encodeURIComponent(trackerId)}` : '/api/export.csv';
+    mapLink.href = trackerId ? `/map?id=${encodeURIComponent(trackerId)}` : '/map';
 
     const url = trackerId ? `/api/packet/${encodeURIComponent(trackerId)}?limit=${MAX_ROWS}` : `/api/packet?limit=${MAX_ROWS}`;
     let r;

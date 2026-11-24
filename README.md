@@ -76,6 +76,10 @@ curl -X POST https://YOUR-SERVICE.onrender.com/api/packet \
 - **Dashboard:** the table shows only the **latest 100 packets**. New packets appear at the top and the oldest row
   drops off the bottom. The counter shows how many are stored, e.g. "500 packets (latest 100 shown)".
 - The API (`/api/packet?limit=`) and the CSV export can still return all 500 stored packets.
+- **Map** (`/map?id=<drone>`): the path of one drone drawn from its stored packets (a green pin at the start,
+  an arrow at the current position pointing where it is heading). It moves by itself as new packets arrive.
+  Street map or satellite; click a point for its time, position and altitude. Map tiles come from OpenStreetMap
+  and Esri (no key needed).
 
 ## Storage size
 

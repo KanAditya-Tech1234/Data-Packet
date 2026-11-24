@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Map · Drone Tag</title>
+<link rel="icon" href="/images/logo.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div id="app-header"></div>
+<main class="page stack">
+  <div class="page-head">
+    <div>
+      <h1>Map</h1>
+      <p class="muted">The path of one drone from its data packets. The map moves by itself as new packets arrive.</p>
+    </div>
+    <div class="chips" aria-live="polite">
+      <span class="chip alt" id="live">Connecting…</span>
+      <span class="chip" id="count">–</span>
+    </div>
+  </div>
+
+  <section class="card" aria-label="Controls">
+    <div class="toolbar">
+      <label class="field">Drone
+        <select id="tracker"><option value="">Loading…</option></select>
+      </label>
+      <label class="check"><input type="checkbox" id="follow" checked> Follow the drone</label>
+      <button class="btn btn-outline" type="button" id="fit">Show whole path</button>
+      <a class="btn btn-accent" id="table-link" href="/">View packets table</a>
+    </div>
+  </section>
+  <div id="status" class="hidden" role="alert"></div>
+
+  <div class="map-box">
+    <div id="map" class="map" aria-label="Map of the drone's path"></div>
+    <div class="map-empty hidden" id="map-empty"></div>
+  </div>
+
+  <section class="card latest" aria-label="Latest position" aria-live="polite">
+    <h2 class="section-title">Latest position</h2>
+    <dl class="facts" id="latest"><div><dt>Drone</dt><dd>–</dd></div></dl>
+  </section>
+  <p class="muted small" style="margin:0">The path uses the drone's latest stored packets (up to 500). Click a point on the path for its details.</p>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="/js/common.js"></script>
+<script src="/js/map.js"></script>
+</body>
+</html>

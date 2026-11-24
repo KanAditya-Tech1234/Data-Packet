@@ -81,7 +81,7 @@ async function createApp({ store, config, log = console }) {
         "default-src 'self'",
         "script-src 'self' https://cdnjs.cloudflare.com",
         "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
-        "img-src 'self' data:",
+        "img-src 'self' data: https://cdnjs.cloudflare.com https://tile.openstreetmap.org https://server.arcgisonline.com",
         "connect-src 'self'",
         "font-src 'self' data:",
         "object-src 'none'",
@@ -301,6 +301,7 @@ async function createApp({ store, config, log = console }) {
     res.redirect(302, '/login');
   });
   app.get('/', requirePage, page('packets'));
+  app.get('/map', requirePage, page('map'));
   app.get('/help', requirePage, page('help'));
 
   app.use((req, res) => {

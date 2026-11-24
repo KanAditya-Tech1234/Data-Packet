@@ -35,7 +35,7 @@ describe('accounts and sessions', () => {
   after(async () => { await srv.close(); });
 
   test('pages redirect to /login when not logged in', async () => {
-    for (const p of ['/', '/help', '/?id=1005']) {
+    for (const p of ['/', '/map', '/help', '/?id=1005', '/map?id=1005']) {
       const res = await fetch(`${srv.base}${p}`, { redirect: 'manual' });
       assert.equal(res.status, 302, p);
       assert.equal(res.headers.get('location'), `/login?next=${encodeURIComponent(p)}`);
@@ -77,6 +77,10 @@ describe('accounts and sessions', () => {
     const page = await fetch(`${srv.base}/`, { headers: { Cookie: c.value }, redirect: 'manual' });
     assert.equal(page.status, 200);
     assert.match(await page.text(), /Data packets/);
+
+    const mapPage = await fetch(`${srv.base}/map?id=1005`, { headers: { Cookie: c.value }, redirect: 'manual' });
+    assert.equal(mapPage.status, 200);
+    assert.match(await mapPage.text(), /id="map"/);
 
     const dup = await send(srv.base, '/api/auth/register', USER);
     assert.equal(dup.status, 409);
