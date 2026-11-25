@@ -171,6 +171,24 @@ input[type="file"] { padding: 7px 10px; cursor: pointer; }
 .chip.tiny { font-size: 11px; padding: 2px 8px; margin-left: 6px; vertical-align: 1px; }
 table.data td.notes { white-space: normal; min-width: 180px; max-width: 360px; font-weight: 500; }
 
+/* ---------- settings: sensors ---------- */
+.settings-layout { display: grid; grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.sensor-list { display: grid; gap: 8px; }
+.sensor-item {
+  display: grid; gap: 4px; width: 100%; text-align: left; font: inherit; cursor: pointer; padding: 10px 12px;
+  background: #fff; border: 1px solid var(--border); border-left: 4px solid transparent; border-radius: 10px; color: var(--text);
+}
+.sensor-item:hover { background: #fafaf6; }
+.sensor-item.active { border-color: var(--green); border-left-color: var(--saffron); background: var(--green-soft); }
+.sensor-item .sensor-name { font-weight: 800; color: var(--forest); overflow-wrap: anywhere; }
+.sensor-item .sensor-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12.5px; }
+.sensor-item .chip.tiny { margin-left: 0; }
+.sensor-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.sensor-title { margin: 0 0 4px; font-size: 21px; }
+.sensor-title code { font-size: 13px; vertical-align: 2px; }
+.btn-danger { background: #fff; color: var(--danger); border-color: #f1b3ad; }
+.btn-danger:hover { background: var(--danger-soft); }
+
 /* ---------- help ---------- */
 table.fields { width: 100%; border-collapse: collapse; font-size: 14px; }
 table.fields th { text-align: left; background: var(--saffron-soft); color: var(--saffron-dark); font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; padding: 8px 10px; }
@@ -208,6 +226,7 @@ table.fields td { padding: 8px 10px; border-bottom: 1px solid var(--border); ver
   h1 { font-size: 21px; }
   .map { height: 58vh; min-height: 340px; }
   .facts-2 { grid-template-columns: minmax(0, 1fr); }
+  .settings-layout { grid-template-columns: minmax(0, 1fr); }
   .map-legend { font-size: 11.5px; padding: 6px 8px; }
 }
 @media (prefers-reduced-motion: reduce) {

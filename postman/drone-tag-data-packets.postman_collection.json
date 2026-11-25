@@ -246,14 +246,44 @@
       }
     },
     {
-      "name": "Config: check version",
+      "name": "Sensors: list",
       "event": [
         {
           "listen": "test",
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('200, or 404 before the first upload', () => pm.expect(pm.response.code).to.be.oneOf([200, 404]));",
+              "pm.test('status 200', () => pm.response.to.have.status(200));",
+              "pm.test('has a sensors list', () => pm.expect(pm.response.json().sensors).to.be.an('array'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/sensors",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "sensors"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "Sensor config: check version",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200, or 404 for an unknown sensor / no file yet', () => pm.expect(pm.response.code).to.be.oneOf([200, 404]));",
               "if (pm.response.code === 200) { const j = pm.response.json(); pm.test('exactly status, updateAvailable, version, fileName, contentType', () => pm.expect(Object.keys(j)).to.eql(['status', 'updateAvailable', 'version', 'fileName', 'contentType'])); pm.test('updateAvailable is true/false', () => pm.expect(j.updateAvailable).to.be.a('boolean')); }"
             ]
           }
@@ -263,12 +293,14 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/api/config/version?current=1.0",
+          "raw": "{{baseUrl}}/api/sensors/{{sensorId}}/config/version?current=1.0",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
             "api",
+            "sensors",
+            "{{sensorId}}",
             "config",
             "version"
           ],
@@ -282,14 +314,14 @@
       }
     },
     {
-      "name": "Config: download latest",
+      "name": "Sensor config: download latest",
       "event": [
         {
           "listen": "test",
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('200, or 404 before the first upload', () => pm.expect(pm.response.code).to.be.oneOf([200, 404]));",
+              "pm.test('200, or 404 for an unknown sensor / no file yet', () => pm.expect(pm.response.code).to.be.oneOf([200, 404]));",
               "if (pm.response.code === 200) pm.test('has the version header', () => pm.expect(pm.response.headers.get('X-Config-Version')).to.be.a('string'));"
             ]
           }
@@ -299,12 +331,14 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/api/config/download",
+          "raw": "{{baseUrl}}/api/sensors/{{sensorId}}/config/download",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
             "api",
+            "sensors",
+            "{{sensorId}}",
             "config",
             "download"
           ],
@@ -317,6 +351,10 @@
     {
       "key": "lastSeq",
       "value": "0"
+    },
+    {
+      "key": "sensorId",
+      "value": "node-sensor"
     }
   ]
 }

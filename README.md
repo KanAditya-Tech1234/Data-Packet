@@ -42,14 +42,17 @@ No login or key is needed to send or read packets. Full reference: `/docs` (Swag
 | GET | `/api/packet-stream?trackerId=&since=` | Live feed (Server-Sent Events) |
 | GET | `/api/export.csv?id=` | CSV export (login required) |
 
-Configuration file (see the section below):
+Sensors and their configuration files (see the section below):
 
 | Method | Path | |
 |---|---|---|
-| GET | `/api/config/version?current=` | `status`, `updateAvailable`, `version`, `fileName`, `contentType` (nothing else) |
-| GET | `/api/config/download?version=` | The file itself (latest, or a given version) |
-| POST | `/api/config?version=&fileName=&notes=` | Upload a new version; the body is the file (login required) |
-| GET | `/api/config/versions` | All kept versions (login required) |
+| GET | `/api/sensors` | All sensors with their latest version |
+| GET | `/api/sensors/:sensorId/config/version?current=` | `status`, `updateAvailable`, `version`, `fileName`, `contentType` (nothing else) |
+| GET | `/api/sensors/:sensorId/config/download?version=` | The sensor's file itself (latest, or a given version) |
+| POST | `/api/sensors` | Add a sensor: `{"name":"Node sensor","id":"node-sensor","description":"…"}` (login required) |
+| DELETE | `/api/sensors/:sensorId` | Delete a sensor and its files (login required) |
+| POST | `/api/sensors/:sensorId/config?version=&fileName=&notes=` | Upload a new version; the body is the file (login required) |
+| GET | `/api/sensors/:sensorId/config/versions` | The sensor's kept versions (login required) |
 
 Sample packet:
 
@@ -90,26 +93,33 @@ curl -X POST https://YOUR-SERVICE.onrender.com/api/packet \
   Street map or satellite; click a point for its time, position and altitude. Map tiles come from OpenStreetMap
   and Esri (no key needed).
 
-## Configuration file
+## Sensors and configuration files
 
-The dashboard's **Configuration** page uploads the drones' configuration file with a version number, shows the
-current version and keeps the **newest 20 versions** (older ones are deleted automatically). Files can be any type,
-up to **1 MB**, and are stored in MongoDB together with their SHA-256 and MD5.
+On the dashboard's **Settings** page you add **sensors** (for example "Node sensor" and "Separate sensor"; any
+number) and upload each sensor's **configuration file with a version number**. Every sensor has its own files,
+its own version numbers and its own APIs, so updating one sensor never affects another. Each sensor keeps its
+**newest 20 versions** (older ones are deleted automatically). Files can be any type, up to **1 MB**, and are
+stored in MongoDB together with their SHA-256 and MD5.
 
-- **Version numbers** are 1–4 whole numbers separated by dots (`3`, `1.2`, `1.2.10`). They are compared number by
-  number, so `1.10` is newer than `1.9`, and `1.2` is the same as `1.2.0`. A new upload must be newer than the
-  current version (409 otherwise).
-- **Drone flow** (no login or key):
-  1. `GET /api/config/version?current=<the drone's version>` returns exactly
-     `{"status":"ok","updateAvailable":true,"version":"1.2","fileName":"drone.json","contentType":"application/json"}`.
+- **Sensor ID**: used in the API address. It is made from the name ("Node sensor" → `node-sensor`) or given
+  explicitly: 1–40 lower-case letters, digits, `-` or `_`. It is not case-sensitive in the URLs.
+- **Version numbers** are 1–4 whole numbers separated by dots (`3`, `1.2`, `1.2.10`), compared number by number
+  (`1.10` is newer than `1.9`; `1.2` = `1.2.0`). A new upload must be newer than that sensor's current version
+  (409 otherwise). Two sensors can have the same version number.
+- **Drone flow** (no login or key), per sensor:
+  1. `GET /api/sensors/node-sensor/config/version?current=<the version the drone has>` returns exactly
+     `{"status":"ok","updateAvailable":true,"version":"1.2","fileName":"node.json","contentType":"application/json"}`.
      `updateAvailable` is true when the uploaded version is newer than `current` (always true without `current`).
-     404 until the first file is uploaded.
-  2. If `updateAvailable` is true: `GET /api/config/download` returns the exact bytes, with `Content-Length`,
-     `X-Config-Version`, `X-Config-SHA256` and `X-Config-MD5` headers to check the download.
+     404 for an unknown sensor or one with no file yet.
+  2. If `updateAvailable` is true: `GET /api/sensors/node-sensor/config/download` returns the exact bytes, with
+     `Content-Length`, `X-Sensor-Id`, `X-Config-Version`, `X-Config-SHA256` and `X-Config-MD5` headers.
+- Files uploaded before sensors existed were moved to the sensor **`default`**, and the old addresses
+  `/api/config/version` and `/api/config/download` still work: they mean that sensor.
 
 ```bash
-curl "https://YOUR-SERVICE.onrender.com/api/config/version?current=1.1"
-curl -o drone.json "https://YOUR-SERVICE.onrender.com/api/config/download"
+curl "https://YOUR-SERVICE.onrender.com/api/sensors"
+curl "https://YOUR-SERVICE.onrender.com/api/sensors/node-sensor/config/version?current=1.1"
+curl -o node.json "https://YOUR-SERVICE.onrender.com/api/sensors/node-sensor/config/download"
 ```
 
 ## Storage size

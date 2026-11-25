@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings · Drone Tag</title>
+<link rel="icon" href="/images/logo.png">
+<link rel="stylesheet" href="/css/app.css?v=6">
+</head>
+<body>
+<div id="app-header"></div>
+<main class="page stack">
+  <div class="page-head">
+    <div>
+      <h1>Settings</h1>
+      <p class="muted">Sensors and their configuration files. Every sensor (for example the Node sensor) has its own
+        configuration files and its own version numbers, and its own APIs for the drone.</p>
+    </div>
+    <div class="chips" aria-live="polite"><span class="chip" id="sensor-count">–</span></div>
+  </div>
+
+  <div class="settings-layout">
+    <!-- left: sensors -->
+    <div class="stack">
+      <section class="card" aria-label="Sensors">
+        <h2 class="section-title">Sensors</h2>
+        <div id="sensor-list" class="sensor-list"><p class="muted">Loading…</p></div>
+      </section>
+
+      <section class="card" aria-label="Add a sensor">
+        <h2 class="section-title">Add sensor</h2>
+        <form id="sensor-form" class="form-stack" novalidate>
+          <label class="field">Sensor name
+            <input id="s-name" maxlength="60" placeholder="e.g. Node sensor" autocomplete="off" required>
+          </label>
+          <label class="field">Sensor ID
+            <input id="s-id" maxlength="40" placeholder="e.g. node-sensor" autocomplete="off" spellcheck="false">
+            <span class="hint">Used in the API address. Made from the name; lower-case letters, digits, - and _.</span>
+          </label>
+          <label class="field">Description (optional)
+            <input id="s-desc" maxlength="300" placeholder="What this sensor is" autocomplete="off">
+          </label>
+          <div id="sensor-status" class="hidden" role="alert"></div>
+          <div class="actions"><button class="btn btn-primary" type="submit" id="s-add">Add sensor</button></div>
+        </form>
+      </section>
+    </div>
+
+    <!-- right: the selected sensor -->
+    <div class="stack" id="detail">
+      <section class="card"><p class="muted">Loading…</p></section>
+    </div>
+  </div>
+</main>
+
+<template id="detail-tpl">
+  <section class="card sensor-head" aria-label="Selected sensor">
+    <div>
+      <h2 class="sensor-title"><span data-f="name"></span> <code data-f="id"></code></h2>
+      <p class="muted" data-f="desc" style="margin:0"></p>
+    </div>
+    <button class="btn btn-danger" type="button" data-f="delete">Delete sensor</button>
+  </section>
+
+  <div class="grid-2">
+    <section class="card" aria-label="Current version">
+      <h2 class="section-title">Current version</h2>
+      <div data-f="current"></div>
+    </section>
+
+    <section class="card" aria-label="Upload a new version">
+      <h2 class="section-title">Upload configuration file</h2>
+      <form data-f="upload-form" class="form-stack" novalidate>
+        <label class="field">Configuration file
+          <input type="file" data-f="file" required>
+          <span class="hint">Any file type (.json, .txt, .ini, .bin …), up to 1 MB.</span>
+        </label>
+        <label class="field">Version number
+          <input data-f="version" placeholder="e.g. 1.0" maxlength="30" autocomplete="off" inputmode="decimal" required>
+          <span class="hint" data-f="version-hint">Numbers separated by dots, e.g. 1, 1.2 or 1.2.10. It must be newer than the current version.</span>
+        </label>
+        <label class="field">Notes (optional)
+          <input data-f="notes" maxlength="300" placeholder="What changed in this version" autocomplete="off">
+        </label>
+        <div data-f="upload-status" class="hidden" role="alert"></div>
+        <div class="actions"><button class="btn btn-primary" type="submit" data-f="upload-btn">Upload</button></div>
+      </form>
+    </section>
+  </div>
+
+  <section class="card" aria-label="APIs for this sensor">
+    <h2 class="section-title">APIs for this sensor</h2>
+    <p class="muted">No login or key is needed. The drone checks the version first and downloads the file only when it is newer.</p>
+    <div class="scroll-x">
+      <table class="fields">
+        <thead><tr><th>API</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code data-f="url-version"></code></td>
+            <td>Answers <code>status</code>, <code>updateAvailable</code>, <code>version</code>, <code>fileName</code> and <code>contentType</code>.
+              <code>updateAvailable</code> is <code>true</code> when this sensor's uploaded version is newer than <code>current=</code>.</td></tr>
+          <tr><td><code data-f="url-download"></code></td>
+            <td>This sensor's latest file, exactly as uploaded. <code>?version=1.0</code> downloads an older version.
+              Headers: <code>X-Config-Version</code>, <code>X-Config-SHA256</code>, <code>Content-Length</code>.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <pre><code data-f="example"></code></pre>
+  </section>
+
+  <section aria-label="All versions" class="stack">
+    <h2 class="section-title" style="margin:0">All versions of this sensor</h2>
+    <div class="table-box">
+      <table class="data">
+        <thead><tr>
+          <th scope="col">Version</th><th scope="col">File</th><th scope="col" class="num">Size</th>
+          <th scope="col">Uploaded (IST)</th><th scope="col">By</th><th scope="col">Notes</th><th scope="col">File</th>
+        </tr></thead>
+        <tbody data-f="versions"></tbody>
+      </table>
+    </div>
+    <p class="muted small" style="margin:0">The newest 20 versions of each sensor are kept; older ones are deleted automatically.</p>
+  </section>
+</template>
+
+<script src="/js/common.js?v=6"></script>
+<script src="/js/settings.js?v=6"></script>
+</body>
+</html>

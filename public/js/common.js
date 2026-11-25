@@ -24,7 +24,7 @@
     return { ok: res.ok, status: res.status, data: data || {} };
   }
 
-  /** Render the sticky header. active: 'packets' | 'map' | 'config' | 'help' | 'docs' */
+  /** Render the sticky header. active: 'packets' | 'map' | 'settings' | 'help' | 'docs' */
   async function header(active) {
     const host = document.getElementById('app-header');
     if (!host) return null;
@@ -38,7 +38,7 @@
         <nav class="nav" aria-label="Main">
           ${link('/', 'packets', 'Data packets')}
           ${link('/map', 'map', 'Map')}
-          ${link('/config', 'config', 'Configuration')}
+          ${link('/settings', 'settings', 'Settings')}
           ${link('/help', 'help', 'Help')}
           ${link('/docs', 'docs', 'API docs')}
           <div class="user-menu" id="user-menu"></div>

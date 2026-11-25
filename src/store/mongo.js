@@ -47,8 +47,11 @@ class MongoStore {
     this.trackers = db.collection('trackers');
     this.users = db.collection('users');
     this.configs = db.collection('configs');
+    this.sensors = db.collection('sensors');
+    // Before sensors existed a version was unique on its own; now it is unique per sensor.
+    try { await this.configs.dropIndex('versionKey_1'); } catch { /* not there */ }
     await Promise.all([
-      this.configs.createIndex({ versionKey: 1 }, { unique: true }),
+      this.configs.createIndex({ sensorId: 1, versionKey: 1 }, { unique: true }),
       this.packets.createIndex({ seq: 1 }, { unique: true }),
       this.packets.createIndex({ trackerIdLower: 1, seq: 1 }),
       this.users.createIndex({ phone: 1 }, { unique: true }),
@@ -120,7 +123,30 @@ class MongoStore {
     return this.users.findOne({ phone });
   }
 
-  // ---------- configuration files ----------
+  // ---------- sensors ----------
+  async createSensor(sensor) {
+    try {
+      await this.sensors.insertOne(sensor);
+    } catch (err) {
+      if (err && err.code === 11000) throw new DuplicateError('sensor already exists');
+      throw err;
+    }
+  }
+
+  async findSensor(id) { return this.sensors.findOne({ _id: id }); }
+
+  async listSensors() { return this.sensors.find({}).sort({ createdAt: 1 }).toArray(); }
+
+  async countSensors() { return this.sensors.countDocuments(); }
+
+  /** Delete a sensor and all of its configuration files. */
+  async deleteSensor(id) {
+    await this.configs.deleteMany({ sensorId: id });
+    const r = await this.sensors.deleteOne({ _id: id });
+    return r.deletedCount > 0;
+  }
+
+  // ---------- configuration files (each belongs to one sensor) ----------
   static fromConfigDoc(doc) {
     if (!doc) return null;
     if (doc.data && !Buffer.isBuffer(doc.data)) doc.data = Buffer.from(doc.data.buffer ?? doc.data);
@@ -136,24 +162,37 @@ class MongoStore {
     }
   }
 
-  /** Newest version (highest versionKey), or the given one. withData adds the file bytes. */
-  async findConfig({ versionKey = null, withData = false } = {}) {
+  /** The sensor's newest version (highest versionKey), or the given one. withData adds the file bytes. */
+  async findConfig({ sensorId, versionKey = null, withData = false }) {
     const projection = withData ? {} : { data: 0 };
-    const q = versionKey ? { versionKey } : {};
+    const q = versionKey ? { sensorId, versionKey } : { sensorId };
     const [doc] = await this.configs.find(q, { projection }).sort({ versionKey: -1 }).limit(1).toArray();
     return MongoStore.fromConfigDoc(doc || null);
   }
 
-  async listConfigs(limit = 50) {
-    return this.configs.find({}, { projection: { data: 0 } }).sort({ versionKey: -1 }).limit(limit).toArray();
+  async listConfigs(sensorId, limit = 50) {
+    return this.configs.find({ sensorId }, { projection: { data: 0 } }).sort({ versionKey: -1 }).limit(limit).toArray();
   }
 
-  /** Keep the newest `keep` versions, delete the rest. */
-  async pruneConfigs(keep) {
-    const [cut] = await this.configs.find({}, { projection: { versionKey: 1 } }).sort({ versionKey: -1 }).skip(keep).limit(1).toArray();
+  /** Keep the sensor's newest `keep` versions, delete the rest. */
+  async pruneConfigs(sensorId, keep) {
+    const [cut] = await this.configs.find({ sensorId }, { projection: { versionKey: 1 } })
+      .sort({ versionKey: -1 }).skip(keep).limit(1).toArray();
     if (!cut) return 0;
-    const r = await this.configs.deleteMany({ versionKey: { $lte: cut.versionKey } });
+    const r = await this.configs.deleteMany({ sensorId, versionKey: { $lte: cut.versionKey } });
     return r.deletedCount;
+  }
+
+  /**
+   * Files uploaded before sensors existed have no sensorId: move them to the given sensor
+   * (created if needed). Returns how many were moved.
+   */
+  async adoptLegacyConfigs(sensor) {
+    const n = await this.configs.countDocuments({ sensorId: { $exists: false } });
+    if (!n) return 0;
+    try { await this.createSensor(sensor); } catch (err) { if (err.code !== 'DUPLICATE') throw err; }
+    const r = await this.configs.updateMany({ sensorId: { $exists: false } }, { $set: { sensorId: sensor._id } });
+    return r.modifiedCount;
   }
 
   async dropDatabase() {
