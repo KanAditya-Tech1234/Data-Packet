@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Firmware · Drone Tag</title>
+<link rel="icon" href="/images/logo.png">
+<link rel="stylesheet" href="/css/app.css?v=7">
+</head>
+<body>
+<div id="app-header"></div>
+<main class="page stack">
+  <div class="page-head">
+    <div>
+      <h1>Thrust-bench firmware</h1>
+      <p class="muted">Download a release <b>before</b> you connect to the bench: its WiFi hotspot has no internet.
+        Each <code>.tbfw</code> package holds the <code>manifest.json</code> and the <code>.ino.bin</code>. Open it in the
+        dashboard's config tab.</p>
+    </div>
+    <div class="actions">
+      <label class="check"><input type="checkbox" id="show-beta"> Show beta releases</label>
+      <a class="btn btn-outline hidden" id="admin-link" href="/firmware/admin">Upload and manage</a>
+    </div>
+  </div>
+
+  <div id="no-access" class="hidden">
+    <section class="card">
+      <h2 class="section-title">No firmware access</h2>
+      <p class="muted" style="margin:0">Firmware images contain the bench passwords, so only engineers and admins can see them.
+        Ask an admin to give your account the <b>engineer</b> role on the <a href="/access">Users</a> page.</p>
+    </section>
+  </div>
+
+  <div id="content" class="stack">
+    <section class="card" aria-label="Compatible set">
+      <h2 class="section-title">Compatible set</h2>
+      <p class="muted">The newest <b>main</b>, <b>n1</b> and <b>n2</b> releases that work together: the same <code>proto</code>, and every
+        "requires" met in both directions.</p>
+      <div id="set"><p class="muted" style="margin:0">Loading…</p></div>
+    </section>
+
+    <div id="targets" class="stack"></div>
+
+    <section class="card" aria-label="Benches">
+      <h2 class="section-title">What is installed where</h2>
+      <p class="muted">From the install reports the dashboard sends after each OTA (newest successful install per bench).</p>
+      <div class="table-box" style="max-height:none">
+        <table class="data">
+          <thead><tr><th scope="col">Bench (MAC)</th><th scope="col">main</th><th scope="col">n1</th><th scope="col">n2</th>
+            <th scope="col">Last successful install (IST)</th><th scope="col">Last report</th><th scope="col" class="num">Reports</th></tr></thead>
+          <tbody id="benches"><tr class="empty"><td colspan="7">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</main>
+
+<template id="target-tpl">
+  <section class="card">
+    <div class="target-head">
+      <div><h2><span class="tname" data-f="name"></span> <span data-f="title"></span></h2><div class="board" data-f="board"></div></div>
+    </div>
+    <div data-f="latest"></div>
+    <h3 style="margin-top:16px">Version history</h3>
+    <div class="table-box" style="max-height:420px">
+      <table class="data">
+        <thead><tr>
+          <th scope="col">Version</th><th scope="col">Channel</th><th scope="col" class="num">Proto</th><th scope="col">Requires</th>
+          <th scope="col">Published (IST)</th><th scope="col" class="num">Size</th><th scope="col">MD5</th><th scope="col">Notes</th><th scope="col">Download</th>
+        </tr></thead>
+        <tbody data-f="history"></tbody>
+      </table>
+    </div>
+  </section>
+</template>
+
+<script src="/js/common.js?v=7"></script>
+<script src="/js/firmware.js?v=7"></script>
+</body>
+</html>

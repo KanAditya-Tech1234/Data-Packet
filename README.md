@@ -23,6 +23,8 @@ dashboard ◀── EventSource /api/packet-stream (live)
 | `src/packet-service.js` | Sequence numbers, pruning to `MAX_PACKETS`, live publishing |
 | `src/sse.js` | Server-Sent Events hub (replay with `Last-Event-ID`, 25 s pings) |
 | `src/auth.js` | scrypt passwords, signed session cookies, login lockout |
+| `src/tb-api.js`, `src/firmware.js` | Thrust-bench firmware API (`/api/tb/v1`), image checks, manifest, compatible set |
+| `src/zip.js`, `src/send-bytes.js` | `.tbfw` ZIP writer; downloads with ETag and Range |
 | `src/store/mongo.js` | MongoDB storage (`src/store/memory.js` is used only by the tests) |
 | `views/`, `public/` | Dashboard pages, CSS and browser JavaScript |
 | `test/` | Automated tests (`npm test`) |
@@ -80,6 +82,10 @@ curl -X POST https://YOUR-SERVICE.onrender.com/api/packet \
 | `PORT` | no | `3000` | Render sets it |
 | `SESSION_SECRET` | yes in production | random per start | Signs the login cookies. If missing, a random one is used and logins end on restart |
 | `MAX_PACKETS` | no | `500` | Keep only the latest this many packets (all drones together); older ones are deleted automatically |
+| `ADMIN_PHONES` | yes, for firmware | – | Mobile numbers (comma-separated) that are always firmware admins, e.g. `9876543210` |
+| `TB_MAX_APP_SIZE_MAIN` | no | `1966080` | Largest `main` image in bytes = its OTA app slot (0x1E0000, "Minimal SPIFFS" scheme). Confirm with the firmware owner |
+| `TB_MAX_APP_SIZE_N1` | no | `1310720` | Largest `n1` image (0x140000, default 4 MB scheme). Confirm with the firmware owner |
+| `TB_MAX_APP_SIZE_N2` | no | `1310720` | Largest `n2` image |
 
 ## How much is kept and shown
 
@@ -121,6 +127,96 @@ curl "https://YOUR-SERVICE.onrender.com/api/sensors"
 curl "https://YOUR-SERVICE.onrender.com/api/sensors/node-sensor/config/version?current=1.1"
 curl -o node.json "https://YOUR-SERVICE.onrender.com/api/sensors/node-sensor/config/download"
 ```
+
+## Thrust-bench firmware (OTA releases)
+
+Built to the drone team's *Thrust Bench – Firmware Server Handoff v1.0*. The server stores firmware releases for
+the three boards and never talks to a bench: field engineers download a release **before** connecting to the
+bench (its hotspot has no internet) and flash it from the bench dashboard.
+
+| Target | Board | Chip ID at byte 12 |
+|---|---|---|
+| `main` | ESP32 DevKit V1 (load cells) | `0x0000` ESP32 |
+| `n1` | ESP32-C3, temperature + RPM | `0x0005` ESP32-C3 |
+| `n2` | ESP32-C3, voltage + current | `0x0005` ESP32-C3 |
+
+**Pages:** **Firmware** (`/firmware`, download page for engineers), **Upload and manage** (`/firmware/admin`,
+admins), **Users and API tokens** (`/access`, from the account menu).
+
+**Roles.** Firmware images contain the bench and WiFi passwords, so nothing is public:
+
+- `admin`: upload, publish, yank, change channel and notes, manage users and tokens, see the logs.
+- `engineer`: list and download releases, send install reports, create own API tokens.
+- `none` (every new account): data packets, map and settings only; the firmware API answers 403.
+- The mobile numbers in `ADMIN_PHONES` are always admins (set it on Render). Admins give other users a role on
+  `/access`. Setting a user to `none` also revokes their tokens.
+
+**Upload rules (§3, §4).** Upload → **draft** → review → **Publish** (the dialog shows the target in large letters
+and asks you to type it, because n1 and n2 are both C3). The server rejects:
+
+- a file whose name does not end in `.ino.bin`, or contains `.merged.`, `.bootloader.` or `.partitions.`;
+- a file whose byte 0 is not `0xE9`;
+- a chip ID that does not match the target (e.g. a C3 image for `main`);
+- an empty file, or one larger than the target's OTA app slot (`TB_MAX_APP_SIZE_*`);
+- a `(target, version)` that already exists (versions are strict `MAJOR.MINOR.PATCH`).
+
+It warns (but allows) when the same SHA-256 is already uploaded under another version. Size, MD5 (lower-case),
+SHA-256, chip ID, uploader and time are computed by the server, never taken from the form. Release notes
+(Markdown, up to 4 000 characters) are required.
+
+**After publishing** a release never changes, except its channel (`stable`/`beta`) and notes. Mistakes are fixed by
+**yanking** (with a reason) and uploading a new version. Yanked releases disappear from "latest" and from the
+compatible set, but stay downloadable by ID (the page asks first). Published releases are never deleted; only
+drafts can be deleted.
+
+**Downloads.** Each release can be downloaded as a `.tbfw` package (a ZIP with exactly `manifest.json` and
+`tb-<target>-<version>.ino.bin`), as the bare `.bin`, or as `manifest.json`. Every download sends
+`Content-Length`, `ETag: "<sha256>"`, `Content-Disposition: attachment` and supports `Range` (resume). The
+**compatible set** is the newest main + n1 + n2 with the same `proto` and every `requires` met in both directions;
+it can be downloaded as one ZIP of three `.tbfw`. Every download is logged (user, release, time, IP), and every
+upload, publish, yank, download, role and token change is in the audit log.
+
+**API** (base `/api/tb/v1`, HTTPS only; full reference in `/docs`, tag *Firmware*). Log in, or send
+`Authorization: Bearer <token>` (create tokens on `/access`; only a hash is stored, and admins can revoke any).
+Errors are `{"error":"<code>","message":"…"}`.
+
+| Method | Path | Who | |
+|---|---|---|---|
+| GET | `/firmware?target=&channel=&include_yanked=` | engineer | Manifests, newest version first |
+| GET | `/firmware/latest?target=n1&channel=stable` | engineer | One manifest, or 404 |
+| GET | `/firmware/compatible-set?channel=stable` | engineer | `{ "main": …, "n1": …, "n2": … }` |
+| GET | `/firmware/compatible-set/package` | engineer | ZIP of the three `.tbfw` |
+| GET | `/firmware/{release_id}` | engineer | Manifest |
+| GET | `/firmware/{release_id}/package` · `/bin` · `/manifest` | engineer | Downloads |
+| POST | `/firmware` | admin | `multipart/form-data`: `file`, `target`, `version`, `proto`, `requires_main`/`requires_n1`/`requires_n2` (or `requires` JSON), `channel`, `notes`, `built_with`. Creates a draft |
+| POST | `/firmware/{id}/publish` | admin | Optional `{"confirm_target":"n1"}` |
+| POST | `/firmware/{id}/yank` | admin | `{"reason":"…"}` |
+| PATCH | `/firmware/{id}` | admin | `{"channel":"stable"}` and/or `{"notes":"…"}` only |
+| DELETE | `/firmware/{id}` | admin | Drafts only |
+| POST | `/installs` | engineer | Install report (§7.4); idempotent on `(bench_mac, release_id, flashed_at)` |
+| GET | `/installs?bench_mac=` · `/benches` | engineer | Reports, and what is installed on each bench |
+| GET | `/me` · `/limits` | engineer | Who am I; size limits (and storage for admins) |
+| GET/POST/DELETE | `/tokens` · `/tokens/{id}` | website login | API tokens |
+| GET/PATCH | `/users` · `/users/{phone}` | admin, website login | Roles |
+| GET | `/downloads` · `/audit` | admin | Logs |
+
+Every list and query answer is the manifest plus a `meta` object (status, yank reason, download URLs). `meta` is
+never part of `manifest.json`. `/firmware?channel=stable` lists stable releases only; `channel=beta` lists beta
+**and** stable (the beta toggle); without `channel` all are listed. `latest` and `compatible-set` default to stable.
+
+```bash
+TOKEN=tbt_xxx   # from the Users and API tokens page
+BASE=https://YOUR-SERVICE.onrender.com/api/tb/v1
+curl -H "Authorization: Bearer $TOKEN" "$BASE/firmware/latest?target=n1"
+curl -H "Authorization: Bearer $TOKEN" -OJ "$BASE/firmware/<release_id>/package"     # tb-n1-2.1.0.tbfw
+curl -H "Authorization: Bearer $TOKEN" -C - -OJ "$BASE/firmware/<release_id>/bin"   # resumes a broken download
+```
+
+**Storage.** Each `.bin` is stored once in MongoDB (`tb_files`, keyed by SHA-256); packages and ZIPs are built when
+downloaded, so they take no space. A main image is about 1.7 MB and a node image about 1 MB, so a full set takes
+about 3.7 MB, and the 512 MB free tier holds roughly 120 sets. The admin page shows the storage used.
+
+**Not built yet (phase 2 in the handoff):** signing manifests with an offline Ed25519 key (`manifest.sig`).
 
 ## Storage size
 
@@ -228,3 +324,7 @@ read all, and an invalid packet (expects 400). Each request has test scripts, so
 - Body limits: 1 MB for packets, 10 KB for login forms. Headers: `X-Content-Type-Options: nosniff`,
   `X-Frame-Options: DENY`, a Content-Security-Policy and `frame-ancestors 'none'`. Errors are always JSON, with no
   stack traces.
+- Firmware: no anonymous access (401), and the `engineer`/`admin` roles are checked on every call (403). API tokens
+  are random 256-bit values; only their SHA-256 is stored, tokens cannot create tokens, and admins can revoke any token.
+  HTTPS only for `/api/tb/v1` (plain HTTP through the proxy is refused), and HSTS (1 year) is sent over HTTPS.
+  Release notes are shown as Markdown through an escaping renderer (no HTML gets through).

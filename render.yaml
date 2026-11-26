@@ -18,3 +18,5 @@ services:
         value: drone_packets
       - key: MAX_PACKETS
         value: "500"
+      - key: ADMIN_PHONES
+        sync: false

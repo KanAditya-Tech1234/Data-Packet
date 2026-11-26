@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Users and API tokens · Drone Tag</title>
+<link rel="icon" href="/images/logo.png">
+<link rel="stylesheet" href="/css/app.css?v=7">
+</head>
+<body>
+<div id="app-header"></div>
+<main class="page stack">
+  <div class="page-head">
+    <div>
+      <h1 id="title">API tokens</h1>
+      <p class="muted">The thrust-bench dashboard uses an API token to list and download firmware:
+        it sends <code>Authorization: Bearer &lt;token&gt;</code>. Only a hash of the token is stored, so it is shown once.</p>
+    </div>
+  </div>
+
+  <div id="no-access" class="hidden">
+    <section class="card"><h2 class="section-title">No firmware access</h2>
+      <p class="muted" style="margin:0">API tokens are for engineers and admins. Ask an admin to give your account the <b>engineer</b> role.</p></section>
+  </div>
+
+  <div id="content" class="stack">
+    <section class="card" aria-label="My API tokens">
+      <h2 class="section-title">My API tokens</h2>
+      <form id="tok-form" class="toolbar" novalidate>
+        <label class="field">Token name
+          <input id="tok-label" maxlength="60" placeholder="e.g. Field laptop 2" autocomplete="off"></label>
+        <button class="btn btn-primary" type="submit" id="tok-btn">Create token</button>
+      </form>
+      <div id="tok-status" class="hidden" role="alert" style="margin-top:10px"></div>
+      <div id="tok-new" class="hidden" style="margin-top:12px"></div>
+      <div class="table-box" style="margin-top:12px;max-height:none">
+        <table class="data">
+          <thead><tr><th scope="col">Name</th><th scope="col">Created (IST)</th><th scope="col">Last used (IST)</th><th scope="col">Status</th><th scope="col"></th></tr></thead>
+          <tbody id="my-tokens"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card hidden" aria-label="Users" id="users-card">
+      <h2 class="section-title">Users and roles</h2>
+      <p class="muted"><b>admin</b>: upload, publish, yank, manage users. <b>engineer</b>: list and download firmware.
+        <b>no access</b>: data packets and map only (new accounts start here). Removing access also revokes the user's tokens.</p>
+      <div class="table-box" style="max-height:none">
+        <table class="data">
+          <thead><tr><th scope="col">Name</th><th scope="col">Mobile</th><th scope="col">Email</th><th scope="col">Registered (IST)</th>
+            <th scope="col" class="num">Active tokens</th><th scope="col">Firmware role</th></tr></thead>
+          <tbody id="users"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card hidden" aria-label="All tokens" id="all-tokens-card">
+      <h2 class="section-title">All API tokens</h2>
+      <div class="table-box" style="max-height:none">
+        <table class="data">
+          <thead><tr><th scope="col">User</th><th scope="col">Name</th><th scope="col">Created (IST)</th><th scope="col">Last used (IST)</th><th scope="col">Status</th><th scope="col"></th></tr></thead>
+          <tbody id="all-tokens"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script src="/js/common.js?v=7"></script>
+<script src="/js/access.js?v=7"></script>
+</body>
+</html>

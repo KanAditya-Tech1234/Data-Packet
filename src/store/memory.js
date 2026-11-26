@@ -14,6 +14,12 @@ class MemoryStore {
     this.users = new Map();
     this.configs = [];
     this.sensors = new Map();
+    this.tokens = [];
+    this.releases = [];
+    this.fwFiles = new Map();
+    this.downloads = [];
+    this.audit = [];
+    this.installs = [];
     this.up = true;
   }
   async init() {}
@@ -84,7 +90,86 @@ class MemoryStore {
     for (const c of legacy) c.sensorId = sensor._id;
     return legacy.length;
   }
-  async dropDatabase() { this.packets = []; this.users.clear(); this.trackers.clear(); this.configs = []; this.sensors.clear(); this.counter = 0; }
+  async listUsers() {
+    return [...this.users.values()].map(u => { const { passwordHash, ...rest } = clone(u); return rest; })
+      .sort((p, q) => p.createdAt - q.createdAt);
+  }
+  async setUserRole(phone, role) {
+    const u = this.users.get(phone);
+    if (!u) return false;
+    u.role = role;
+    return true;
+  }
+  async createToken(doc) { this.tokens.push(clone(doc)); }
+  async findTokenByHash(tokenHash) { const t = this.tokens.find(x => x.tokenHash === tokenHash && !x.revokedAt); return t ? clone(t) : null; }
+  async listTokens(phone = null) {
+    return this.tokens.filter(t => !phone || t.phone === phone).map(t => { const { tokenHash, ...rest } = clone(t); return rest; })
+      .sort((p, q) => q.createdAt - p.createdAt);
+  }
+  async findToken(id) { const t = this.tokens.find(x => x._id === id); if (!t) return null; const { tokenHash, ...rest } = clone(t); return rest; }
+  async revokeToken(id, at) {
+    const t = this.tokens.find(x => x._id === id && !x.revokedAt);
+    if (!t) return false;
+    t.revokedAt = at;
+    return true;
+  }
+  async revokeTokensOf(phone, at) {
+    let n = 0;
+    for (const t of this.tokens) if (t.phone === phone && !t.revokedAt) { t.revokedAt = at; n++; }
+    return n;
+  }
+  async touchToken(id, at) { const t = this.tokens.find(x => x._id === id); if (t) t.lastUsedAt = at; }
+
+  async insertRelease(doc) {
+    if (this.releases.some(r => r.product === doc.product && r.target === doc.target && r.version === doc.version)) {
+      throw new DuplicateError('release already exists');
+    }
+    this.releases.push(clone(doc));
+  }
+  async findRelease(id) { const r = this.releases.find(x => x._id === id); return r ? clone(r) : null; }
+  async listReleases(product) { return this.releases.filter(r => r.product === product).map(clone); }
+  async findReleasesBySha(sha256) { return this.releases.filter(r => r.sha256 === sha256).map(clone); }
+  async updateRelease(id, where, set) {
+    const r = this.releases.find(x => x._id === id && Object.entries(where).every(([k, v]) => x[k] === v));
+    if (!r) return null;
+    Object.assign(r, clone(set));
+    return clone(r);
+  }
+  async deleteRelease(id, where = {}) {
+    const i = this.releases.findIndex(x => x._id === id && Object.entries(where).every(([k, v]) => x[k] === v));
+    if (i < 0) return false;
+    this.releases.splice(i, 1);
+    return true;
+  }
+  async putFirmwareFile(sha256, data) { if (!this.fwFiles.has(sha256)) this.fwFiles.set(sha256, Buffer.from(data)); }
+  async getFirmwareFile(sha256) { const d = this.fwFiles.get(sha256); return d ? Buffer.from(d) : null; }
+  async deleteFirmwareFile(sha256) { this.fwFiles.delete(sha256); }
+  async firmwareBytes() {
+    let bytes = 0;
+    for (const d of this.fwFiles.values()) bytes += d.length;
+    return { bytes, files: this.fwFiles.size };
+  }
+  async insertDownload(doc) { this.downloads.push(clone(doc)); }
+  async listDownloads(limit = 200) { return [...this.downloads].sort((p, q) => q.at - p.at).slice(0, limit).map(clone); }
+  async insertAudit(doc) { this.audit.push(clone(doc)); }
+  async listAudit(limit = 200) { return [...this.audit].sort((p, q) => q.at - p.at).slice(0, limit).map(clone); }
+  async insertInstall(doc) {
+    if (this.installs.some(i => i.benchMac === doc.benchMac && i.releaseId === doc.releaseId && +i.flashedAt === +doc.flashedAt)) {
+      throw new DuplicateError('install already reported');
+    }
+    this.installs.push(clone(doc));
+  }
+  async findInstall({ benchMac, releaseId, flashedAt }) {
+    const i = this.installs.find(x => x.benchMac === benchMac && x.releaseId === releaseId && +x.flashedAt === +flashedAt);
+    return i ? clone(i) : null;
+  }
+  async listInstalls({ benchMac = null, limit = 500 } = {}) {
+    return this.installs.filter(i => !benchMac || i.benchMac === benchMac).sort((p, q) => q.flashedAt - p.flashedAt).slice(0, limit).map(clone);
+  }
+  async dropDatabase() {
+    this.packets = []; this.users.clear(); this.trackers.clear(); this.configs = []; this.sensors.clear(); this.counter = 0;
+    this.tokens = []; this.releases = []; this.fwFiles.clear(); this.downloads = []; this.audit = []; this.installs = [];
+  }
   async close() {}
 }
 

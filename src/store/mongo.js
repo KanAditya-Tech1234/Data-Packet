@@ -48,6 +48,12 @@ class MongoStore {
     this.users = db.collection('users');
     this.configs = db.collection('configs');
     this.sensors = db.collection('sensors');
+    this.tokens = db.collection('api_tokens');
+    this.releases = db.collection('tb_releases');
+    this.fwFiles = db.collection('tb_files');
+    this.downloads = db.collection('tb_downloads');
+    this.audit = db.collection('tb_audit');
+    this.installs = db.collection('tb_installs');
     // Before sensors existed a version was unique on its own; now it is unique per sensor.
     try { await this.configs.dropIndex('versionKey_1'); } catch { /* not there */ }
     await Promise.all([
@@ -55,6 +61,14 @@ class MongoStore {
       this.packets.createIndex({ seq: 1 }, { unique: true }),
       this.packets.createIndex({ trackerIdLower: 1, seq: 1 }),
       this.users.createIndex({ phone: 1 }, { unique: true }),
+      this.tokens.createIndex({ tokenHash: 1 }, { unique: true }),
+      this.tokens.createIndex({ phone: 1 }),
+      this.releases.createIndex({ product: 1, target: 1, version: 1 }, { unique: true }),
+      this.releases.createIndex({ sha256: 1 }),
+      this.downloads.createIndex({ at: -1 }),
+      this.audit.createIndex({ at: -1 }),
+      this.installs.createIndex({ benchMac: 1, releaseId: 1, flashedAt: 1 }, { unique: true }),
+      this.installs.createIndex({ flashedAt: -1 }),
     ]);
   }
 
@@ -193,6 +207,89 @@ class MongoStore {
     try { await this.createSensor(sensor); } catch (err) { if (err.code !== 'DUPLICATE') throw err; }
     const r = await this.configs.updateMany({ sensorId: { $exists: false } }, { $set: { sensorId: sensor._id } });
     return r.modifiedCount;
+  }
+
+  // ---------- users: roles ----------
+  async listUsers() {
+    return this.users.find({}, { projection: { passwordHash: 0 } }).sort({ createdAt: 1 }).toArray();
+  }
+
+  async setUserRole(phone, role) {
+    const r = await this.users.updateOne({ phone }, { $set: { role } });
+    return r.matchedCount > 0;
+  }
+
+  // ---------- API tokens (only the SHA-256 of a token is stored) ----------
+  async createToken(doc) { await this.tokens.insertOne(doc); }
+  async findTokenByHash(tokenHash) { return this.tokens.findOne({ tokenHash, revokedAt: null }); }
+  async listTokens(phone = null) {
+    return this.tokens.find(phone ? { phone } : {}, { projection: { tokenHash: 0 } }).sort({ createdAt: -1 }).toArray();
+  }
+  async findToken(id) { return this.tokens.findOne({ _id: id }, { projection: { tokenHash: 0 } }); }
+  async revokeToken(id, at) {
+    const r = await this.tokens.updateOne({ _id: id, revokedAt: null }, { $set: { revokedAt: at } });
+    return r.modifiedCount > 0;
+  }
+  async revokeTokensOf(phone, at) {
+    const r = await this.tokens.updateMany({ phone, revokedAt: null }, { $set: { revokedAt: at } });
+    return r.modifiedCount;
+  }
+  async touchToken(id, at) { await this.tokens.updateOne({ _id: id }, { $set: { lastUsedAt: at } }); }
+
+  // ---------- firmware releases ----------
+  async insertRelease(doc) {
+    try {
+      await this.releases.insertOne(doc);
+    } catch (err) {
+      if (err && err.code === 11000) throw new DuplicateError('release already exists');
+      throw err;
+    }
+  }
+  async findRelease(id) { return this.releases.findOne({ _id: id }); }
+  async listReleases(product) { return this.releases.find({ product }).toArray(); }
+  async findReleasesBySha(sha256) { return this.releases.find({ sha256 }).toArray(); }
+  /** Update only when the release matches `where` (e.g. its status); returns the new document or null. */
+  async updateRelease(id, where, set) {
+    return this.releases.findOneAndUpdate({ _id: id, ...where }, { $set: set }, { returnDocument: 'after' });
+  }
+  async deleteRelease(id, where = {}) {
+    const r = await this.releases.deleteOne({ _id: id, ...where });
+    return r.deletedCount > 0;
+  }
+
+  // ---------- firmware files, content-addressed by SHA-256 ----------
+  async putFirmwareFile(sha256, data) {
+    await this.fwFiles.updateOne({ _id: sha256 }, { $setOnInsert: { data, size: data.length, createdAt: new Date() } }, { upsert: true });
+  }
+  async getFirmwareFile(sha256) {
+    const doc = await this.fwFiles.findOne({ _id: sha256 });
+    if (!doc) return null;
+    return Buffer.isBuffer(doc.data) ? doc.data : Buffer.from(doc.data.buffer ?? doc.data);
+  }
+  async deleteFirmwareFile(sha256) { await this.fwFiles.deleteOne({ _id: sha256 }); }
+  async firmwareBytes() {
+    const [r] = await this.fwFiles.aggregate([{ $group: { _id: null, bytes: { $sum: '$size' }, files: { $sum: 1 } } }]).toArray();
+    return { bytes: r ? r.bytes : 0, files: r ? r.files : 0 };
+  }
+
+  // ---------- download log, audit log ----------
+  async insertDownload(doc) { await this.downloads.insertOne(doc); }
+  async listDownloads(limit = 200) { return this.downloads.find({}).sort({ at: -1 }).limit(limit).toArray(); }
+  async insertAudit(doc) { await this.audit.insertOne(doc); }
+  async listAudit(limit = 200) { return this.audit.find({}).sort({ at: -1 }).limit(limit).toArray(); }
+
+  // ---------- install reports ----------
+  async insertInstall(doc) {
+    try {
+      await this.installs.insertOne(doc);
+    } catch (err) {
+      if (err && err.code === 11000) throw new DuplicateError('install already reported');
+      throw err;
+    }
+  }
+  async findInstall({ benchMac, releaseId, flashedAt }) { return this.installs.findOne({ benchMac, releaseId, flashedAt }); }
+  async listInstalls({ benchMac = null, limit = 500 } = {}) {
+    return this.installs.find(benchMac ? { benchMac } : {}).sort({ flashedAt: -1 }).limit(limit).toArray();
   }
 
   async dropDatabase() {

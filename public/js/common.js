@@ -24,7 +24,9 @@
     return { ok: res.ok, status: res.status, data: data || {} };
   }
 
-  /** Render the sticky header. active: 'packets' | 'map' | 'settings' | 'help' | 'docs' */
+  const ROLE_NAMES = { admin: 'admin', engineer: 'engineer', none: 'no access' };
+
+  /** Render the sticky header. active: 'packets' | 'map' | 'firmware' | 'settings' | 'help' | 'docs' */
   async function header(active) {
     const host = document.getElementById('app-header');
     if (!host) return null;
@@ -38,6 +40,7 @@
         <nav class="nav" aria-label="Main">
           ${link('/', 'packets', 'Data packets')}
           ${link('/map', 'map', 'Map')}
+          ${link('/firmware', 'firmware', 'Firmware')}
           ${link('/settings', 'settings', 'Settings')}
           ${link('/help', 'help', 'Help')}
           ${link('/docs', 'docs', 'API docs')}
@@ -60,6 +63,8 @@
       </button>
       <div class="menu" id="user-dropdown" role="menu">
         <div class="who"><b>${esc(u.name)}</b>${esc(u.phone)}<br>${esc(u.email)}</div>
+        <div class="who role">Firmware role: <b>${esc(ROLE_NAMES[u.role] || 'no access')}</b></div>
+        <a href="/access" role="menuitem">${u.role === 'admin' ? 'Users and API tokens' : 'My API tokens'}</a>
         <a href="/help" role="menuitem">Help</a>
         <button type="button" role="menuitem" id="logout-btn">Log out</button>
       </div>`;
@@ -84,5 +89,80 @@
     el.innerHTML = esc(message) + (items.length ? `<ul>${items.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '');
   }
 
-  window.DT = { esc, fmtIST, fmtInt, api, header, showStatus };
+  const fmtSize = n => (n < 1024 ? `${n} B` : n < 1024 * 1024 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`);
+
+  /**
+   * Safe Markdown for release notes: everything is escaped first, then headings, lists, code,
+   * **bold**, *italic* and [links](https://…) are added. No raw HTML ever gets through.
+   */
+  function md(text) {
+    const inline = s => esc(s)
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+      .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<i>$2</i>')
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    const out = [];
+    let list = null, code = null, para = [];
+    const flushPara = () => { if (para.length) { out.push(`<p>${para.map(inline).join('<br>')}</p>`); para = []; } };
+    const flushList = () => { if (list) { out.push(`<${list.tag}>${list.items.map(i => `<li>${inline(i)}</li>`).join('')}</${list.tag}>`); list = null; } };
+    for (const line of String(text || '').split('\n')) {
+      if (code) {
+        if (/^```/.test(line)) { out.push(`<pre><code>${esc(code.join('\n'))}</code></pre>`); code = null; } else code.push(line);
+        continue;
+      }
+      if (/^```/.test(line)) { flushPara(); flushList(); code = []; continue; }
+      const h = /^(#{1,4})\s+(.*)$/.exec(line);
+      const ul = /^\s*[-*]\s+(.*)$/.exec(line);
+      const ol = /^\s*\d+[.)]\s+(.*)$/.exec(line);
+      if (h) { flushPara(); flushList(); out.push(`<h4>${inline(h[2])}</h4>`); }
+      else if (ul || ol) {
+        flushPara();
+        const tag = ul ? 'ul' : 'ol';
+        if (!list || list.tag !== tag) { flushList(); list = { tag, items: [] }; }
+        list.items.push((ul || ol)[1]);
+      } else if (!line.trim()) { flushPara(); flushList(); }
+      else { flushList(); para.push(line); }
+    }
+    if (code) out.push(`<pre><code>${esc(code.join('\n'))}</code></pre>`);
+    flushPara(); flushList();
+    return `<div class="md">${out.join('')}</div>`;
+  }
+
+  /**
+   * A modal dialog. Resolves with the form values (object) when confirmed, or null when cancelled.
+   * opts: { title, html, confirmText, danger, validate(values) -> error text or null, wide }
+   */
+  function dialog({ title, html, confirmText = 'OK', danger = false, validate = null, wide = false }) {
+    return new Promise(resolve => {
+      const d = document.createElement('dialog');
+      d.className = wide ? 'dlg wide' : 'dlg';
+      d.innerHTML = `<form method="dialog" class="form-stack">
+          <h2 class="section-title" style="margin:0">${esc(title)}</h2>
+          <div class="dlg-body">${html || ''}</div>
+          <div class="dlg-error status err hidden" role="alert"></div>
+          <div class="actions dlg-actions">
+            <button type="button" class="btn btn-outline" value="cancel" data-cancel>Cancel</button>
+            <button type="submit" class="btn ${danger ? 'btn-danger-solid' : 'btn-primary'}" value="ok">${esc(confirmText)}</button>
+          </div>
+        </form>`;
+      document.body.appendChild(d);
+      const form = d.querySelector('form');
+      let result = null;
+      d.querySelector('[data-cancel]').addEventListener('click', () => d.close());
+      form.addEventListener('submit', e => {
+        e.preventDefault();
+        const values = Object.fromEntries(new FormData(form).entries());
+        const check = validate ? validate(values) : null;
+        if (check) { const box = d.querySelector('.dlg-error'); box.textContent = check; box.classList.remove('hidden'); return; }
+        result = values;
+        d.close();
+      });
+      d.addEventListener('close', () => { d.remove(); resolve(result); });
+      d.showModal();
+      const first = d.querySelector('input, textarea, select');
+      if (first) first.focus(); else d.querySelector('[type=submit]').focus();
+    });
+  }
+
+  window.DT = { esc, fmtIST, fmtInt, fmtSize, api, header, showStatus, md, dialog };
 })();

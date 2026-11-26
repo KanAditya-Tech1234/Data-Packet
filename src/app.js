@@ -10,6 +10,7 @@ const auth = require('./auth');
 const csv = require('./csv');
 const { buildOpenApi } = require('./openapi');
 const cfg = require('./config-files');
+const { createTbRouter, roleOf } = require('./tb-api');
 
 const ROOT = path.join(__dirname, '..');
 const VIEWS = path.join(ROOT, 'views');
@@ -34,6 +35,7 @@ const ENDPOINTS = [
   'POST /api/auth/login',
   'POST /api/auth/logout',
   'GET /api/auth/me',
+  'GET /api/tb/v1/firmware  (thrust-bench firmware API: login or Bearer token; see /docs)',
   'GET /docs',
   'GET /openapi.json',
 ];
@@ -103,7 +105,7 @@ async function createApp({ store, config, log = console }) {
         "frame-ancestors 'none'",
       ].join('; '),
     });
-    if (req.secure) res.set('Strict-Transport-Security', 'max-age=15552000');
+    if (req.secure) res.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     next();
   });
 
@@ -125,7 +127,7 @@ async function createApp({ store, config, log = console }) {
     if (!data) return next();
     try {
       const user = await store.findUserByPhone(data.p);
-      if (user) req.user = { name: user.name, phone: user.phone, email: user.email };
+      if (user) req.user = { name: user.name, phone: user.phone, email: user.email, role: roleOf(user, config) };
     } catch { /* database down: treat as logged out */ }
     next();
   });
@@ -451,6 +453,9 @@ async function createApp({ store, config, log = console }) {
     res.json({ status: 'ok', user: req.user });
   });
 
+  // ---------- thrust-bench firmware (login + role required; see src/tb-api.js) ----------
+  app.use('/api/tb/v1', createTbRouter({ store, config, log }));
+
   // ---------- API docs ----------
   app.get('/openapi.json', (req, res) => res.json(buildOpenApi(`${req.protocol}://${req.get('host')}`)));
   app.get('/docs', page('docs'));
@@ -471,6 +476,9 @@ async function createApp({ store, config, log = console }) {
   app.get('/settings', requirePage, page('settings'));
   app.get('/config', (req, res) => res.redirect(301, '/settings'));   // old address
   app.get('/help', requirePage, page('help'));
+  app.get('/firmware', requirePage, page('firmware'));
+  app.get('/firmware/admin', requirePage, page('firmware-admin'));
+  app.get('/access', requirePage, page('access'));
 
   app.use((req, res) => {
     if (req.accepts(['html', 'json']) === 'html') {

@@ -1,6 +1,8 @@
 'use strict';
 // OpenAPI 3 description of the API (served at /openapi.json, shown at /docs).
 
+const { tbPaths, tbSchemas, tbSecuritySchemes } = require('./openapi-tb');
+
 const SAMPLE = { id: '1005', lat: 23.078143, lon: 72.531243, Alt: 16.5, Alt_R: 'AGL', d_x: 0.32, d_y: -0.18, d_z: 0.19 };
 const STORED = {
   id: '6751c3f0a1b2c3d4e5f60718', seq: 42, trackerId: '1005', lat: 23.078143, lon: 72.531243, alt: 16.5, altRef: 'AGL',
@@ -25,7 +27,7 @@ function buildOpenApi(serverUrl) {
         '(`Alt_R` = `alt_r` = `AltR`). Numbers may be sent as text. The `Content-Type` header is not required.',
     },
     servers: [{ url: serverUrl }],
-    tags: [{ name: 'Packets' }, { name: 'Live' }, { name: 'Sensors', description: 'Sensors and their configuration files. Each sensor has its own files and version numbers.' }, { name: 'Service' }, { name: 'Dashboard' }],
+    tags: [{ name: 'Packets' }, { name: 'Live' }, { name: 'Sensors', description: 'Sensors and their configuration files. Each sensor has its own files and version numbers.' }, { name: 'Firmware', description: 'Thrust-bench firmware releases (/api/tb/v1). Login or a Bearer API token is required, plus the engineer or admin role. Errors are {"error":"<code>","message":"…"}.' }, { name: 'Service' }, { name: 'Dashboard' }],
     paths: {
       '/health': {
         get: {
@@ -200,8 +202,10 @@ function buildOpenApi(serverUrl) {
       },
       '/api/auth/logout': { post: { tags: ['Dashboard'], summary: 'Log out', responses: { 200: { description: 'Logged out' } } } },
       '/api/auth/me': { get: { tags: ['Dashboard'], summary: 'The logged-in user', responses: { 200: { description: 'User' }, 401: err('Not logged in', { status: 'error', message: 'not logged in', errors: ['not logged in'] }) } } },
+      ...tbPaths,
     },
     components: {
+      securitySchemes: tbSecuritySchemes,
       parameters: {
         since: { name: 'since', in: 'query', description: 'Only packets with a larger seq', schema: { type: 'integer', minimum: 0, default: 0 } },
         limit: { name: 'limit', in: 'query', description: 'How many of the newest packets', schema: { type: 'integer', minimum: 1, maximum: 5000, default: 200 } },
@@ -244,6 +248,7 @@ function buildOpenApi(serverUrl) {
             packets: { type: 'array', items: { $ref: '#/components/schemas/Packet' } },
           },
         },
+        ...tbSchemas,
         Error: {
           type: 'object', required: ['status', 'message', 'errors'],
           properties: { status: { type: 'string', example: 'error' }, message: { type: 'string' }, errors: { type: 'array', items: { type: 'string' } } },

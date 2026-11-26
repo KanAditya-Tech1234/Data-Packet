@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Help · Drone Tag</title>
 <link rel="icon" href="/images/logo.png">
-<link rel="stylesheet" href="/css/app.css?v=6">
+<link rel="stylesheet" href="/css/app.css?v=7">
 </head>
 <body>
 <div id="app-header"></div>
@@ -78,6 +78,26 @@
     </ul>
   </section>
 
+  <section class="card">
+    <h2 class="section-title">Thrust-bench firmware</h2>
+    <p>The <a href="/firmware">Firmware</a> page holds the OTA releases for the bench boards <b>main</b> (ESP32), <b>n1</b> and <b>n2</b>
+      (ESP32-C3). Firmware contains the bench passwords, so you need the <b>engineer</b> role to download it and the <b>admin</b> role
+      to upload. New accounts have no firmware access: an admin gives it on the <a href="/access">Users and API tokens</a> page.</p>
+    <ul class="small">
+      <li><b>Engineers:</b> download a release <b>before</b> going to the bench (its WiFi has no internet). Take the <code>.tbfw</code>
+        package (manifest + image in one file) or "Download all three" for the compatible set, and open it in the bench dashboard's
+        config tab. Yanked releases are greyed out and ask before downloading.</li>
+      <li><b>Admins:</b> <a href="/firmware/admin">Upload and manage</a> → choose the <code>.ino.bin</code> (not the
+        <code>.merged.</code>, <code>.bootloader.</code> or <code>.partitions.</code> file), target, version (e.g. <code>2.1.0</code>), proto,
+        requires and notes → the upload becomes a <b>draft</b> → check the values the server computed → <b>Publish</b> (type the target to confirm).
+        A published release never changes: to fix a mistake, <b>yank</b> it with a reason and upload a new version.</li>
+      <li><b>Bench dashboard / scripts:</b> create an API token on the <a href="/access">Users and API tokens</a> page and send
+        <code>Authorization: Bearer &lt;token&gt;</code> to <code>/api/tb/v1/…</code>, e.g.
+        <code>GET /api/tb/v1/firmware/latest?target=n1</code> or <code>GET /api/tb/v1/firmware/compatible-set</code>.
+        Downloads support <code>Range</code>, so a broken download can resume. All endpoints are in the <a href="/docs">API docs</a> (Firmware).</li>
+    </ul>
+  </section>
+
   <div class="grid-2">
     <section class="card">
       <h2 class="section-title">Read packets</h2>
@@ -102,7 +122,7 @@
     </section>
   </div>
 </main>
-<script src="/js/common.js?v=6"></script>
-<script src="/js/help.js?v=6"></script>
+<script src="/js/common.js?v=7"></script>
+<script src="/js/help.js?v=7"></script>
 </body>
 </html>

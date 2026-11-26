@@ -9,7 +9,7 @@ const { MongoStore } = require('../src/store/mongo');
 
 const quiet = { log() {}, warn() {}, error() {} };
 
-async function startServer({ maxPackets = 100000 } = {}) {
+async function startServer({ maxPackets = 100000, adminPhones = [], maxAppSize = { main: 0x1E0000, n1: 0x140000, n2: 0x140000 } } = {}) {
   let store;
   if (process.env.TEST_MONGODB_URI) {
     const db = `drone_packets_test_${crypto.randomBytes(4).toString('hex')}`;
@@ -18,7 +18,7 @@ async function startServer({ maxPackets = 100000 } = {}) {
   } else {
     store = new MemoryStore();
   }
-  const config = { sessionSecret: 'test-secret', maxPackets };
+  const config = { sessionSecret: 'test-secret', maxPackets, adminPhones, maxAppSize };
   const { app, hub } = await createApp({ store, config, log: quiet });
   const server = await new Promise(resolve => { const s = app.listen(0, '127.0.0.1', () => resolve(s)); });
   const base = `http://127.0.0.1:${server.address().port}`;

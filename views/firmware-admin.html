@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Firmware admin · Drone Tag</title>
+<link rel="icon" href="/images/logo.png">
+<link rel="stylesheet" href="/css/app.css?v=7">
+</head>
+<body>
+<div id="app-header"></div>
+<main class="page stack">
+  <div class="page-head">
+    <div>
+      <h1>Firmware: upload and manage</h1>
+      <p class="muted">Upload creates a <b>draft</b>. Check the values the server computed, then <b>Publish</b>. A published release never
+        changes: fix a mistake by yanking it and uploading a new version.</p>
+    </div>
+    <div class="actions"><a class="btn btn-outline" href="/firmware">Download page</a></div>
+  </div>
+
+  <div id="no-access" class="hidden">
+    <section class="card"><h2 class="section-title">Admins only</h2>
+      <p class="muted" style="margin:0">Only an admin can upload, publish or yank firmware. <a href="/firmware">Go to the download page</a>.</p></section>
+  </div>
+
+  <div id="content" class="stack">
+    <div class="grid-2">
+      <section class="card" aria-label="Upload a release">
+        <h2 class="section-title">Upload a release</h2>
+        <form id="up-form" class="form-stack" novalidate>
+          <label class="field">Firmware file (.ino.bin)
+            <input type="file" id="up-file" accept=".bin" required>
+            <span class="hint">The OTA app image from <i>Sketch → Export Compiled Binary</i>, e.g. <code>thrust_bench.ino.bin</code>.
+              Not the <code>.merged.</code>, <code>.bootloader.</code> or <code>.partitions.</code> file.</span>
+          </label>
+          <div class="req-grid">
+            <label class="field">Target
+              <select id="up-target" required>
+                <option value="">Choose…</option>
+                <option value="main">main (ESP32)</option>
+                <option value="n1">n1 (ESP32-C3, temp + RPM)</option>
+                <option value="n2">n2 (ESP32-C3, voltage + current)</option>
+              </select>
+            </label>
+            <label class="field">Version
+              <input id="up-version" placeholder="e.g. 2.1.0" maxlength="20" autocomplete="off" spellcheck="false" required>
+            </label>
+            <label class="field">Proto
+              <input id="up-proto" type="number" min="1" step="1" value="1" required>
+            </label>
+            <label class="field">Channel
+              <select id="up-channel"><option value="beta" selected>beta</option><option value="stable">stable</option></select>
+            </label>
+          </div>
+          <fieldset class="form-stack" style="border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin:0">
+            <legend class="hint" style="font-weight:700;padding:0 6px">Requires: minimum version of each other board (optional)</legend>
+            <div class="req-grid" id="up-requires"></div>
+          </fieldset>
+          <label class="field">Release notes (Markdown)
+            <textarea id="up-notes" maxlength="4000" placeholder="What changed, e.g. Fix RPM debounce at low PPR." required></textarea>
+            <span class="hint"><span id="notes-count">0</span> / 4000 characters</span>
+          </label>
+          <label class="field">Built with (optional)
+            <input id="up-built" maxlength="100" placeholder="e.g. arduino-esp32 3.3.12" autocomplete="off">
+          </label>
+          <div id="up-status" class="hidden" role="alert"></div>
+          <div class="actions"><button class="btn btn-primary" type="submit" id="up-btn">Upload as draft</button></div>
+        </form>
+      </section>
+
+      <div class="stack">
+        <section class="card" aria-label="Limits and storage">
+          <h2 class="section-title">Limits and storage</h2>
+          <div id="limits"><p class="muted" style="margin:0">Loading…</p></div>
+        </section>
+        <section class="card" aria-label="Drafts">
+          <h2 class="section-title">Drafts waiting for review</h2>
+          <div id="drafts"><p class="muted" style="margin:0">Loading…</p></div>
+        </section>
+      </div>
+    </div>
+
+    <section aria-label="Published releases" class="stack">
+      <h2 class="section-title" style="margin:0">Published and yanked releases</h2>
+      <div class="table-box">
+        <table class="data">
+          <thead><tr><th scope="col">Target</th><th scope="col">Version</th><th scope="col">Status</th><th scope="col">Channel</th>
+            <th scope="col" class="num">Proto</th><th scope="col">Published (IST)</th><th scope="col">By</th><th scope="col">Notes</th><th scope="col">Actions</th></tr></thead>
+          <tbody id="releases"><tr class="empty"><td colspan="9">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-label="Downloads" class="stack">
+      <h2 class="section-title" style="margin:0">Download log (newest 200)</h2>
+      <div class="table-box" style="max-height:420px">
+        <table class="data">
+          <thead><tr><th scope="col">Time (IST)</th><th scope="col">User</th><th scope="col">Release</th><th scope="col">File</th><th scope="col">Via</th><th scope="col">IP</th></tr></thead>
+          <tbody id="downloads"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-label="Audit log" class="stack">
+      <h2 class="section-title" style="margin:0">Audit log (newest 200)</h2>
+      <div class="table-box" style="max-height:420px">
+        <table class="data">
+          <thead><tr><th scope="col">Time (IST)</th><th scope="col">Action</th><th scope="col">User</th><th scope="col">Details</th><th scope="col">IP</th></tr></thead>
+          <tbody id="audit"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script src="/js/common.js?v=7"></script>
+<script src="/js/firmware-admin.js?v=7"></script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Drone Tag – Data Packets",
-    "description": "Set the environment variable baseUrl (e.g. http://localhost:3000 or your Render URL).",
+    "description": "Set the environment variable baseUrl (e.g. http://localhost:3000 or your Render URL). For the Firmware requests also set tbToken: an API token from the Users and API tokens page (/access).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -345,6 +345,323 @@
           "query": []
         }
       }
+    },
+    {
+      "name": "Firmware: latest n1 (stable)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200, or 404 when there is no stable n1 yet', () => pm.expect(pm.response.code).to.be.oneOf([200, 404]));",
+              "if (pm.response.code === 200) { const m = pm.response.json(); pm.test('lower-case md5', () => pm.expect(m.md5).to.match(/^[0-9a-f]{32}$/)); pm.collectionVariables.set('releaseId', m.release_id); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{tbToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/tb/v1/firmware/latest?target=n1&channel=stable",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "tb",
+            "v1",
+            "firmware",
+            "latest"
+          ],
+          "query": [
+            {
+              "key": "target",
+              "value": "n1"
+            },
+            {
+              "key": "channel",
+              "value": "stable"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Firmware: list (all targets, with yanked)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "pm.test('array of manifests', () => pm.expect(pm.response.json()).to.be.an('array'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{tbToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/tb/v1/firmware?include_yanked=true",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "tb",
+            "v1",
+            "firmware"
+          ],
+          "query": [
+            {
+              "key": "include_yanked",
+              "value": "true"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Firmware: compatible set",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200, or 404 when no compatible set exists', () => pm.expect(pm.response.code).to.be.oneOf([200, 404]));",
+              "if (pm.response.code === 200) pm.test('main, n1, n2', () => pm.expect(pm.response.json()).to.have.all.keys('main', 'n1', 'n2'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{tbToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/tb/v1/firmware/compatible-set?channel=stable",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "tb",
+            "v1",
+            "firmware",
+            "compatible-set"
+          ],
+          "query": [
+            {
+              "key": "channel",
+              "value": "stable"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Firmware: manifest.json of {{releaseId}}",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200', () => pm.response.to.have.status(200));",
+              "pm.test('ETag is the sha256', () => pm.expect(pm.response.headers.get('ETag')).to.match(/^\"[0-9a-f]{64}\"$/));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{tbToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/tb/v1/firmware/{{releaseId}}/manifest",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "tb",
+            "v1",
+            "firmware",
+            "{{releaseId}}",
+            "manifest"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "Firmware: download .tbfw of {{releaseId}}",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 zip', () => { pm.response.to.have.status(200); pm.expect(pm.response.headers.get('Content-Type')).to.include('application/zip'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{tbToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/tb/v1/firmware/{{releaseId}}/package",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "tb",
+            "v1",
+            "firmware",
+            "{{releaseId}}",
+            "package"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "Firmware: first 1 KB of the .bin (Range)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('206 partial', () => pm.response.to.have.status(206));",
+              "pm.test('Content-Range', () => pm.expect(pm.response.headers.get('Content-Range')).to.match(/^bytes 0-1023\\//));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Range",
+            "value": "bytes=0-1023"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{tbToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/tb/v1/firmware/{{releaseId}}/bin",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "tb",
+            "v1",
+            "firmware",
+            "{{releaseId}}",
+            "bin"
+          ],
+          "query": []
+        }
+      }
+    },
+    {
+      "name": "Firmware: without token (expects 401)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('401 unauthorized', () => { pm.response.to.have.status(401); pm.expect(pm.response.json().error).to.equal('unauthorized'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/tb/v1/firmware",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "tb",
+            "v1",
+            "firmware"
+          ],
+          "query": []
+        }
+      }
     }
   ],
   "variable": [
@@ -355,6 +672,10 @@
     {
       "key": "sensorId",
       "value": "node-sensor"
+    },
+    {
+      "key": "releaseId",
+      "value": ""
     }
   ]
 }
